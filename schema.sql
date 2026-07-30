@@ -460,3 +460,11 @@ alter table public.profiles
 -- machinery (access_codes, code_attempts, redeem_access_code, create_staff, ...)
 -- and the password-signup autoconfirm trigger were dropped.
 -- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- Migration remove_email_stack: no outbound email at all. Dropped send_email,
+-- notification_to_email + its trigger, send_test_email, recent_mail, set_settings,
+-- set_notify_email, reconcile_mail (and its cron job), the notifications and
+-- mail_log tables, profiles.notify_email and every mail_* row in app_config.
+-- book_public / cancel_booking no longer write notification rows.
+-- ---------------------------------------------------------------------------

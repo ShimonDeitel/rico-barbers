@@ -65,26 +65,7 @@ Supabase project: Postgres with row level security, Supabase Auth for accounts, 
 for photos, and all business logic as Postgres functions. Nothing else needs to be running,
 there is no server to keep alive, and both halves are on free tiers.
 
-Two `pg_cron` jobs run inside the database around the clock: one folds email delivery results
-back into the log every minute, one trims old log rows nightly.
-
-## Email notifications
-
-Booking creates a row in `notifications`, and an `AFTER INSERT` trigger turns every such row
-into an email — so bookings, cancellations and test messages all mail out with no extra wiring.
-The barber gets an English mail, the customer gets a Hebrew confirmation.
-
-Set it up once from **Manager → Email notifications**:
-
-1. Create a free sender account. Brevo's free tier is 300 emails a day, forever, and lets you
-   verify a single sender address (your own Gmail works) with no domain of your own.
-2. Copy the API key, pick the provider, fill in the verified sender address, save.
-3. Press **Send a test email to me** and watch the result appear under *Last emails sent*.
-
-The key is stored encrypted in Supabase Vault, never in a normal table and never in this repo.
-`send_email()` reads it server-side; the browser never sees it. If no key is set, the app still
-works and everyone still gets in-app notifications — only the mail is skipped.
-Every attempt is logged with the provider's real HTTP status, so a bounce is visible instead of silent.
+A nightly `pg_cron` job trims old rows so a free-tier database never fills up.
 
 ## Security model
 
@@ -105,8 +86,6 @@ Every attempt is logged with the provider's real HTTP status, so a bounce is vis
   so a customer needs no account to manage one and cannot see anyone else's.
 - Every security-relevant action (code redeemed, code rejected, lockout, role change, key change)
   is written to an append-only audit log the manager can read and nobody else can.
-- The email API key is held in Supabase Vault, encrypted at rest, readable only by a
-  `SECURITY DEFINER` function. It never reaches the browser.
 - No third-party CDN: `@supabase/supabase-js` is vendored into `vendor/`, so no outside script
   can be swapped under the app. A Content Security Policy limits the page to its own files
   plus the one Supabase host; scripts, frames and form posts to anywhere else are blocked.
@@ -125,10 +104,6 @@ Every attempt is logged with the provider's real HTTP status, so a bounce is vis
 
 ## Notes
 
-- Email confirmation is bypassed on signup (a database trigger marks new emails confirmed),
-  because the project has no outbound SMTP. To require real email verification, remove the
-  `autoconfirm_email_trg` trigger and configure an SMTP provider in Supabase.
-- Staff sign in with a code, so their account address is a hash and cannot receive mail. Each
-  barber sets a real inbox in their own profile if they want booking alerts by email.
-- Phone push would need a native app or an installed PWA with VAPID keys; email plus the
-  dashboard covers the same need for free today.
+- There is no email and no outbound messaging of any kind, so there is no provider account,
+  no API key and no per-message cost. A booking appears on the barber's dashboard immediately;
+  that is the notification.

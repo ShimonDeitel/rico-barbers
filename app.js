@@ -516,12 +516,11 @@ function drawDaysOff(rows, after) {
 async function managerView() {
   const start = new Date(todayISO() + 'T00:00:00Z').toISOString();
   const weekEnd = new Date(Date.now() + 7 * 864e5).toISOString();
-  const [team, appts, cfg, mail, sec] = await Promise.all([
+  const [team, appts, cfg, sec] = await Promise.all([
     sb.rpc('list_team'),
     sb.from('appointments').select('*').eq('status', 'booked')
       .gte('starts_at', start).lte('starts_at', weekEnd).order('starts_at'),
     sb.rpc('get_settings'),
-    sb.rpc('recent_mail', { p_limit: 8 }),
     sb.rpc('recent_security', { p_limit: 8 })
   ]);
   if (team.error) return toast(team.error.message, true);
@@ -614,41 +613,6 @@ async function managerView() {
           <input type="file" id="galFiles" accept="image/jpeg,image/png,image/webp" multiple>
         </div>
         <button class="b" id="saveSite" style="margin-top:16px">${esc(T.save)}</button>
-      </div>
-    </details>
-
-    <details class="fold">
-      <summary>${esc(T.emails)}</summary>
-      <div class="inner">
-        <div class="two">
-          <div class="field"><label>${esc(T.mailProvider)}</label>
-            <select id="cProv">
-              <option value=""${!c.mail_provider ? ' selected' : ''}>${esc(T.mailOff)}</option>
-              <option value="brevo"${c.mail_provider === 'brevo' ? ' selected' : ''}>Brevo</option>
-              <option value="resend"${c.mail_provider === 'resend' ? ' selected' : ''}>Resend</option>
-            </select></div>
-          <div class="field"><label>${esc(T.mailName)}</label><input id="cFromName" value="${esc(c.mail_from_name || '')}"></div>
-        </div>
-        <div class="field"><label>${esc(T.mailFrom)}</label><input id="cFrom" type="email" value="${esc(c.mail_from_email || '')}"></div>
-        <div class="field">
-          <label>${esc(T.mailKey)} <span class="tag ${c.mail_key_set ? 'ok' : ''}">${esc(c.mail_key_set ? T.mailKeySet : T.mailKeyNot)}</span></label>
-          <input id="cKey" type="password" autocomplete="new-password" placeholder="${esc(T.mailKeep)}">
-        </div>
-        <div class="brow">
-          <button class="b" id="saveMail">${esc(T.save)}</button>
-          <button class="b ghost" id="testMail">${esc(T.testMail)}</button>
-        </div>
-        <h2 class="sec">${esc(T.lastMail)}</h2>
-        <table class="mini">
-          <tr><th>${esc(T.when)}</th><th>${esc(T.who)}</th><th>${esc(T.result)}</th></tr>
-          ${(mail.data || []).length ? (mail.data || []).map(m => `
-            <tr><td>${esc(fmtShort(m.created_at))} ${fmtTime(m.created_at)}</td>
-            <td>${esc(m.to_email)}</td>
-            <td>${m.error ? `<span class="tag">${esc(String(m.error).slice(0, 40))}</span>`
-              : m.status_code == null ? `<span class="tag">${esc(T.queued)}</span>`
-              : `<span class="tag ok">${esc(T.sent)}</span>`}</td></tr>`).join('')
-            : `<tr><td colspan="3" style="color:var(--dim)">${esc(T.nothing)}</td></tr>`}
-        </table>
       </div>
     </details>
 
@@ -763,20 +727,6 @@ async function managerView() {
     toast(T.saved);
   };
 
-  $('#saveMail').onclick = async () => {
-    const { error } = await sb.rpc('set_settings', {
-      p_provider: $('#cProv').value, p_from_email: $('#cFrom').value.trim(),
-      p_from_name: $('#cFromName').value.trim(), p_shop_name: c.shop_name || 'RICO BARBERS',
-      p_api_key: $('#cKey').value
-    });
-    if (error) return toast(error.message, true);
-    toast(T.saved); managerView();
-  };
-  $('#testMail').onclick = async () => {
-    const { error } = await sb.rpc('send_test_email');
-    if (error) return toast(error.message, true);
-    toast(T.saved); setTimeout(managerView, 2500);
-  };
 }
 
 /* ============================ ROUTER ============================ */
