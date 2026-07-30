@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260730211016';
+} from './ui.js?v=20260730211203';
 
 const home = $('#home');
 const view = $('#view');
@@ -475,7 +475,9 @@ function askCode(kind) {
     $('#checkIt').disabled = true;
     const { data, error } = await sb.rpc('check_code', { p_kind: kind, p_code: code });
     $('#checkIt').disabled = false;
-    if (error) { $('#theCode').value = ''; return toast(error.message, true); }
+    $('#theCode').value = '';
+    if (error) return toast(error.message, true);
+    if (!data) return toast(T.wrongCode, true);      // wrong, or locked out for guessing
     writeTicket({ id: data, kind, at: Date.now() });
     googleStep(kind);
   };
