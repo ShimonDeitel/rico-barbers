@@ -449,21 +449,46 @@ details.fold > summary::after { content: "+"; margin-inline-start: auto; font-si
 details.fold[open] > summary::after { content: "\2212"; }
 details.fold .inner { padding: 0 18px 18px; }
 
-/* gallery */
-.gal { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
-.gal figure { position: relative; aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden;
-  border: 1px solid var(--hair); }
-.gal img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.gal button { position: absolute; top: 6px; inset-inline-end: 6px; width: auto;
-  padding: 6px 10px; font-size: 11px; }
-
-/* front-page gallery strip */
+/* front-page gallery — editorial grid, caption burned into each frame */
 .shots { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
-@media (min-width: 760px) { .shots { grid-template-columns: repeat(4, 1fr); } }
-.shots figure { margin: 0; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 4px; }
-.shots img { width: 100%; height: 100%; object-fit: cover; display: block;
-  filter: grayscale(1) contrast(1.05); transition: filter .6s var(--ease), transform .8s var(--ease); }
-.shots figure:hover img { filter: grayscale(0); transform: scale(1.04); }
+@media (min-width: 900px) {
+  .shots { grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; }
+  .shots figure.lead { grid-column: span 2; grid-row: span 2; }
+}
+.shots figure {
+  position: relative; margin: 0; overflow: hidden;
+  aspect-ratio: 3 / 4; background: #0c0c0c;
+}
+.shots figure.lead { aspect-ratio: 1 / 1; }
+@media (max-width: 899px) { .shots figure.lead { grid-column: span 2; aspect-ratio: 4 / 3; } }
+.shots img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  filter: grayscale(1) contrast(1.08) brightness(.92);
+  transform: scale(1.01);
+  transition: filter .7s var(--ease), transform 1.1s var(--ease);
+}
+.shots figure:hover img { filter: grayscale(0) contrast(1) brightness(1); transform: scale(1.06); }
+.shots figcaption {
+  position: absolute; inset-inline: 0; bottom: 0;
+  padding: 44px 16px 14px;
+  background: linear-gradient(to top, rgba(0,0,0,.88) 0%, rgba(0,0,0,.45) 55%, transparent 100%);
+  pointer-events: none;
+}
+.shots figcaption span {
+  font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+  display: inline-block;
+  border-bottom: 1px solid rgba(255,255,255,.35); padding-bottom: 5px;
+}
+.shots figure.lead figcaption span { font-size: 13px; letter-spacing: .22em; }
+
+/* manager's gallery editor */
+.gal { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.galedit figure { position: relative; aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--hair); margin: 0 0 8px; }
+.galedit img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.galedit figure button { position: absolute; top: 6px; inset-inline-end: 6px; width: auto;
+  padding: 6px 10px; font-size: 11px; }
+.galedit input { margin-bottom: 6px; padding: 9px 11px; font-size: 13px; border-radius: 10px; }
 
 /* toast */
 .toast {

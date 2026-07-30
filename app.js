@@ -72,10 +72,16 @@ function paintHome() {
       <span class="sprice">${esc(T.currency)}${esc(s.price || '')}</span>
     </div>`).join('');
 
-  const shots = parseJSON(C.gallery_json, []);
-  $('#gallery').innerHTML = shots.map(p =>
-    `<figure class="reveal"><img loading="lazy" alt=""
-       src="${SUPABASE_URL}/storage/v1/object/public/photos/${encodeURI(p)}"></figure>`).join('');
+  // a photo is {p, he, en}; older entries were bare strings
+  const shots = parseJSON(C.gallery_json, []).map(s => typeof s === 'string' ? { p: s } : s);
+  $('#gallery').innerHTML = shots.map((s, i) => {
+    const cap = (lang === 'en' ? (s.en || s.he) : (s.he || s.en)) || '';
+    return `<figure class="reveal${i === 0 ? ' lead' : ''}">
+      <img loading="lazy" alt="${esc(cap)}"
+           src="${SUPABASE_URL}/storage/v1/object/public/photos/${encodeURI(s.p)}">
+      ${cap ? `<figcaption><span>${esc(cap)}</span></figcaption>` : ''}
+    </figure>`;
+  }).join('');
   $('#shots').style.display = shots.length ? '' : 'none';
 
   const by = hoursByDay(), today = shopNow().getDay();
@@ -668,7 +674,7 @@ async function managerView() {
   /* website content */
   let services = parseJSON(c.services_json, []);
   let hours = parseJSON(c.hours_json, []);
-  let gallery = parseJSON(c.gallery_json, []);
+  let gallery = parseJSON(c.gallery_json, []).map(s => typeof s === 'string' ? { p: s } : s);
 
   const drawSvc = () => {
     $('#svcRows').innerHTML = services.map((s, i) => `
@@ -710,27 +716,39 @@ async function managerView() {
     });
   };
   const drawGal = () => {
-    $('#gal').innerHTML = gallery.map((p, i) => `
-      <figure><img src="${SUPABASE_URL}/storage/v1/object/public/photos/${encodeURI(p)}" alt="">
-      <button class="b ghost sm" data-delpic="${i}">${esc(T.remove)}</button></figure>`).join('');
-    $$('[data-delpic]').forEach(b => b.onclick = () => { gallery.splice(+b.dataset.delpic, 1); drawGal(); });
+    $('#gal').innerHTML = gallery.map((s, i) => `
+      <div class="galedit" data-pic="${i}">
+        <figure><img src="${SUPABASE_URL}/storage/v1/object/public/photos/${encodeURI(s.p)}" alt="">
+        <button class="b ghost sm" data-delpic="${i}">${esc(T.remove)}</button></figure>
+        <input data-f="he" placeholder="${esc(T.capHe)}" value="${esc(s.he || '')}">
+        <input data-f="en" placeholder="${esc(T.capEn)}" value="${esc(s.en || '')}">
+      </div>`).join('');
+    $$('[data-delpic]').forEach(b => b.onclick = () => { readGal(); gallery.splice(+b.dataset.delpic, 1); drawGal(); });
+  };
+  const readGal = () => {
+    gallery = $$('[data-pic]').map((row, i) => ({
+      p: gallery[+row.dataset.pic].p,
+      he: $('[data-f=he]', row).value.trim(),
+      en: $('[data-f=en]', row).value.trim()
+    }));
   };
   drawSvc(); drawShopHours(); drawGal();
   $('#addSvc').onclick = () => { readSvc(); services.push({ he: '', en: '', price: '', min: '30' }); drawSvc(); };
 
   $('#galFiles').onchange = async () => {
+    readGal();
     for (const f of [...$('#galFiles').files].slice(0, 12)) {
       if (f.size > 3 * 1024 * 1024) { toast('3MB', true); continue; }
       const path = `${me.id}/gallery/${Date.now()}-${Math.floor(performance.now())}.${(f.name.split('.').pop() || 'jpg').toLowerCase()}`;
       const up = await sb.storage.from('photos').upload(path, f, { upsert: true, contentType: f.type });
       if (up.error) { toast(up.error.message, true); continue; }
-      gallery.push(path);
+      gallery.push({ p: path, he: '', en: '' });
     }
     $('#galFiles').value = ''; drawGal(); toast(T.saved);
   };
 
   $('#saveSite').onclick = async () => {
-    readSvc(); readShopHours();
+    readSvc(); readShopHours(); readGal();
     const body = {
       services_json: JSON.stringify(services),
       hours_json: JSON.stringify(hours),

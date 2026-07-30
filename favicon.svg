@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RICO BARBERS">
+  <rect width="512" height="512" fill="#000"/>
+  <!-- barber-pole stripes, the same motif that runs across the site -->
+  <g fill="#fff" opacity="0.16">
+    <rect x="-140" y="-60" width="46" height="700" transform="rotate(25 256 256)"/>
+    <rect x="-40"  y="-60" width="46" height="700" transform="rotate(25 256 256)"/>
+    <rect x="60"   y="-60" width="46" height="700" transform="rotate(25 256 256)"/>
+    <rect x="160"  y="-60" width="46" height="700" transform="rotate(25 256 256)"/>
+    <rect x="260"  y="-60" width="46" height="700" transform="rotate(25 256 256)"/>
+    <rect x="360"  y="-60" width="46" height="700" transform="rotate(25 256 256)"/>
+    <rect x="460"  y="-60" width="46" height="700" transform="rotate(25 256 256)"/>
+  </g>
+  <text x="256" y="256" fill="#fff"
+        font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="380" font-weight="800" letter-spacing="-18"
+        text-anchor="middle" dominant-baseline="central">R</text>
+</svg>
