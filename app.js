@@ -276,6 +276,24 @@ async function confirmBooking() {
 
 /* ============================ STAFF ============================ */
 
+/* A barber leaves this page open on the counter all day, so it has to keep
+   itself current: refresh every minute while visible, and the moment the tab
+   is looked at again. */
+let liveTimer = null;
+function keepLive() {
+  if (liveTimer) return;
+  liveTimer = setInterval(() => {
+    if (document.hidden) return;
+    if (currentRoute() !== 'staff') return;
+    if (document.querySelector('#view input:focus, #view textarea:focus, #view select:focus')) return;
+    if (document.querySelector('#view details.fold[open]')) return;   // mid-edit, leave them alone
+    staffView();
+  }, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && currentRoute() === 'staff') staffView();
+  });
+}
+
 async function staffView() {
   view.innerHTML = `<h1 class="page">${esc(T.loading)}</h1>`;
   const { data: { session } } = await sb.auth.getSession();
@@ -301,6 +319,7 @@ async function staffView() {
     if (!s.error && s.data && s.data !== 'customer') return staffView();
   }
 
+  keepLive();
   if (me.role === 'manager') return managerView();
   if (me.role === 'barber') return barberView();
 
