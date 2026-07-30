@@ -555,3 +555,7 @@ details.fold .inner { padding: 0 18px 18px; }
 .rev .stars { font-size: 13px; letter-spacing: .3em; }
 .rev blockquote { margin: 0; font-size: clamp(16px, 2.2vw, 20px); font-weight: 300; line-height: 1.45; }
 .rev figcaption { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+
+
+/* the staff link only lights up once someone is deliberately tapping it */
+.foot a.armed { color: var(--paper); }

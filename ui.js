@@ -1,7 +1,7 @@
 /* Shared plumbing for every page: one Supabase client, one language switch,
    one set of strings, one set of helpers. */
 
-import { createClient } from './vendor/supabase.js?v=20260731003642';
+import { createClient } from './vendor/supabase.js?v=20260731005135';
 
 export const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';
@@ -134,7 +134,7 @@ const S = {
   },
 
   en: {
-    dir: 'ltr', locale: 'en-GB', short: 'עב',
+    dir: 'ltr', locale: 'en-GB', short: 'HE',
     back: 'Back', loading: 'Loading…', save: 'Save', saved: 'Saved', cancel: 'Cancel',
     remove: 'Remove', add: 'Add', close: 'Close', yes: 'Yes', no: 'No', none: 'None',
     signOut: 'Sign out', today: 'Today', week: 'This week', settings: 'Settings',
@@ -243,6 +243,10 @@ export function toggleLang(onChange) { setLang(lang === 'he' ? 'en' : 'he', onCh
 export function applyDir() {
   document.documentElement.dir = T.dir;
   document.documentElement.lang = lang;
+  // the button lives outside every view, so it has to be refreshed here or it
+  // keeps yesterday's label on any screen that is not the home page
+  const b = document.getElementById('langBtn');
+  if (b) { b.textContent = T.short; b.title = T.dir === 'rtl' ? 'English' : 'עברית'; }
 }
 
 /* ---------------- helpers ---------------- */

@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260731003642';
+} from './ui.js?v=20260731005135';
 
 const home = $('#home');
 const view = $('#view');
@@ -1113,6 +1113,25 @@ async function route() {
   if (r === 'book') return bookView();
   return staffView();
 }
+
+/* The staff link is not for customers. Three taps inside a second and a half. */
+(() => {
+  const link = document.querySelector('.foot a[href="#/staff"]');
+  if (!link) return;
+  let taps = 0, timer = null;
+  link.addEventListener('click', (e) => {
+    if (location.hash === '#/staff') return;         // already there, let it be
+    e.preventDefault();
+    taps += 1;
+    clearTimeout(timer);
+    timer = setTimeout(() => { taps = 0; link.classList.remove('armed'); }, 1500);
+    if (taps >= 2) link.classList.add('armed');      // a hint only once they are trying
+    if (taps >= 3) {
+      taps = 0; clearTimeout(timer); link.classList.remove('armed');
+      location.hash = '#/staff';
+    }
+  });
+})();
 
 addEventListener('hashchange', () => { scrollTo(0, 0); route(); });
 
