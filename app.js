@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260731015809';
+} from './ui.js?v=20260731020205';
 
 const home = $('#home');
 const view = $('#view');
@@ -1095,8 +1095,11 @@ async function managerView() {
     if (!current) return toast(T.needCurrentCode, true);
     $('#saveCodes').disabled = true;
     for (const [kind, code] of jobs) {
-      const { error } = await sb.rpc('set_code', { p_kind: kind, p_code: code, p_current: current });
-      if (error) { $('#saveCodes').disabled = false; return toast(error.message, true); }
+      const { data, error } = await sb.rpc('set_code', { p_kind: kind, p_code: code, p_current: current });
+      if (error || data !== 'ok') {
+        $('#saveCodes').disabled = false;
+        return toast(error ? error.message : 'current manager code is wrong', true);
+      }
     }
     toast(T.codeSaved); managerView();
   };
