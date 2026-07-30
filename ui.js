@@ -1,7 +1,7 @@
 /* Shared plumbing for every page: one Supabase client, one language switch,
    one set of strings, one set of helpers. */
 
-import { createClient } from './vendor/supabase.js?v=20260730194628';
+import { createClient } from './vendor/supabase.js?v=20260730205304';
 
 export const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';
@@ -51,6 +51,22 @@ const S = {
     needNamePhone: 'צריך שם וטלפון.', another: 'קביעת תור נוסף',
     todayLabel: 'היום', tomorrowLabel: 'מחר',
 
+    doorManager: 'כניסה כמנהל', doorBarber: 'כניסה כספר',
+    doorSub: 'בוחרים דלת, מתחברים עם Google, ומזינים את הקוד.',
+    managerOfShop: 'מנהל המספרה',
+    codeManager: 'קוד מנהל', codeBarber: 'קוד ספר',
+    codeHint: 'את הקוד מקבלים מהמנהל.', yourNameQ: 'איך קוראים לך?',
+    finish: 'סיום', wrongCode: 'הקוד לא נכון.',
+    signedInAs: 'מחובר כ', switchAccount: 'חשבון אחר',
+    codeHint2: 'הקוד לספרים הוא מה שאתה נותן למי שמצטרף. אפשר להחליף מתי שרוצים — הקוד הישן מפסיק לעבוד מיד.',
+    codes: 'קודים', managerCodeLbl: 'קוד כניסה למנהלים', barberCodeLbl: 'קוד כניסה לספרים',
+    newCode: 'קוד חדש', codeSaved: 'הקוד עודכן.', codeRule: '4 עד 12 ספרות',
+    showPhone: 'להציג את הטלפון שלי בדף הכניסה',
+    tomorrow: 'מחר', remind: 'תזכורת', reminded: 'נשלח',
+    remindHint: 'לחיצה פותחת וואטסאפ עם ההודעה מוכנה, מהמספר שלך.',
+    remindAll: 'שליחת תזכורת לכולם', noTomorrow: 'אין תורים מחר.',
+    reviews: 'ביקורות', reviewsKicker: 'מה אומרים', addReview: 'הוספת ביקורת',
+    revName: 'שם', revText: 'טקסט', revStars: 'כוכבים', onGoogle: 'בגוגל',
     /* staff gate */
     staffTitle: 'כניסת צוות', staffSub: 'התחברו עם חשבון Google שלכם.',
     google: 'התחברות עם Google', signingIn: 'מתחבר…',
@@ -105,7 +121,11 @@ const S = {
       'not found': 'לא נמצא.',
       'name required': 'צריך שם.',
       'you cannot remove yourself': 'אי אפשר להסיר את עצמך.',
-      'invalid email': 'כתובת אימייל לא תקינה.'
+      'invalid email': 'כתובת אימייל לא תקינה.',
+      'wrong code': 'הקוד לא נכון.',
+      'too many attempts, try again later': 'יותר מדי נסיונות, נסו שוב בעוד שעה.',
+      'code must be 4 to 12 digits': 'הקוד חייב להיות 4 עד 12 ספרות.',
+      'you cannot remove yourself': 'אי אפשר להסיר את עצמך.'
     }
   },
 
@@ -139,6 +159,22 @@ const S = {
     needNamePhone: 'Name and phone are required.', another: 'Book another',
     todayLabel: 'Today', tomorrowLabel: 'Tomorrow',
 
+    doorManager: 'Enter as manager', doorBarber: 'Enter as barber',
+    doorSub: 'Pick a door, sign in with Google, enter your code.',
+    managerOfShop: 'Shop manager',
+    codeManager: 'Manager code', codeBarber: 'Barber code',
+    codeHint: 'The manager gives you this code.', yourNameQ: 'What is your name?',
+    finish: 'Finish', wrongCode: 'That code is wrong.',
+    signedInAs: 'Signed in as', switchAccount: 'Use another account',
+    codeHint2: 'The barber code is what you hand to someone joining. Change it whenever you like — the old one stops working at once.',
+    codes: 'Codes', managerCodeLbl: 'Manager entry code', barberCodeLbl: 'Barber entry code',
+    newCode: 'New code', codeSaved: 'Code updated.', codeRule: '4 to 12 digits',
+    showPhone: 'Show my phone on the entrance page',
+    tomorrow: 'Tomorrow', remind: 'Remind', reminded: 'sent',
+    remindHint: 'Opens WhatsApp with the message written, from your own number.',
+    remindAll: 'Remind everyone', noTomorrow: 'Nothing booked tomorrow.',
+    reviews: 'Reviews', reviewsKicker: 'What people say', addReview: 'Add a review',
+    revName: 'Name', revText: 'Text', revStars: 'Stars', onGoogle: 'on Google',
     staffTitle: 'Staff entrance', staffSub: 'Sign in with your Google account.',
     google: 'Sign in with Google', signingIn: 'Signing in…',
     notStaff: 'This account is not on the team. Ask the manager to add it.',

@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260730194628';
+} from './ui.js?v=20260730205304';
 
 const home = $('#home');
 const view = $('#view');
@@ -83,6 +83,15 @@ function paintHome() {
     </figure>`;
   }).join('');
   $('#shots').style.display = shots.length ? '' : 'none';
+
+  const revs = parseJSON(C.reviews_json, []);
+  $('#reviews-list').innerHTML = revs.map(r => `
+    <figure class="rev reveal">
+      <div class="stars" aria-label="${esc(String(r.stars || 5))}">${'★'.repeat(Math.max(1, Math.min(5, +r.stars || 5)))}</div>
+      <blockquote>${esc(r.text || '')}</blockquote>
+      <figcaption>${esc(r.name || '')}${r.src ? ` · <span>${esc(r.src)}</span>` : ''}</figcaption>
+    </figure>`).join('');
+  $('#reviews').style.display = revs.length ? '' : 'none';
 
   const by = hoursByDay(), today = shopNow().getDay();
   $('#hours-list').innerHTML = T.days.map((d, i) => {
@@ -281,6 +290,19 @@ async function confirmBooking() {
 }
 
 
+/* One tap opens WhatsApp with the reminder already written, sent from the
+   barber's own number. No provider, no cost, and it is what barbers do anyway. */
+function remindLink(a, barberName) {
+  const when = fmtTime(a.starts_at);
+  const day = new Date(a.starts_at).toLocaleDateString(T.locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ });
+  const shop = C.shop_name || 'RICO BARBERS';
+  const body = (a.customer_lang === 'en' || lang === 'en')
+    ? `Hi ${a.customer_name}, a reminder about your appointment at ${shop} on ${day} at ${when}. See you.`
+    : `היי ${a.customer_name}, תזכורת לתור שלך ב${shop} ב${day} בשעה ${when}. נתראה!`;
+  const phone = a.customer_phone.replace(/[^0-9]/g, '').replace(/^0/, '972');
+  return `https://wa.me/${phone}?text=${encodeURIComponent(body)}`;
+}
+
 /* ---------------- calendar ----------------
    A month grid built by hand:each day shows how many appointments sit on it,
    the picked day drives the list underneath. */
@@ -374,11 +396,10 @@ async function staffView() {
   view.innerHTML = `<h1 class="page">${esc(T.loading)}</h1>`;
   const { data: { session } } = await sb.auth.getSession();
 
-  if (!session) return signInScreen();
+  if (!session) return doorScreen();
 
-  // a token can outlive the account it belongs to
   const { error: dead } = await sb.auth.getUser();
-  if (dead) { await sb.auth.signOut(); return signInScreen(); }
+  if (dead) { await sb.auth.signOut(); return doorScreen(); }
 
   me.id = session.user.id;
   me.email = session.user.email || '';
@@ -389,43 +410,86 @@ async function staffView() {
   me.role = r.data?.role || 'customer';
   me.profile = p.data || {};
 
-  // an address can be allowlisted after a first sign-in; re-check once
-  if (me.role === 'customer') {
-    const s = await sb.rpc('sync_my_role');
-    if (!s.error && s.data && s.data !== 'customer') return staffView();
-  }
-
   keepLive();
   if (me.role === 'manager') return managerView();
   if (me.role === 'barber') return barberView();
-
-  view.innerHTML = `
-    <h1 class="page">${esc(T.staffTitle)}</h1>
-    <p class="dek">${esc(T.notStaff)}</p>
-    <p class="dek" style="margin-top:8px">${esc(me.email)}</p>
-    <div class="brow" style="margin-top:20px">
-      <button class="b ghost" id="out">${esc(T.signOut)}</button>
-    </div>`;
-  $('#out').onclick = async () => { await sb.auth.signOut(); staffView(); };
+  return codeScreen();
 }
 
-function signInScreen() {
+/* the door: who are you here as? */
+async function doorScreen() {
+  const card = await sb.rpc('manager_card').then(r => (r.data && r.data[0]) || null);
   view.innerHTML = `
     <h1 class="page">${esc(T.staffTitle)}</h1>
-    <p class="dek">${esc(T.staffSub)}</p>
-    <div class="panel pad" style="max-width:420px;margin-top:22px">
-      <button class="b" id="g">${esc(T.google)}</button>
-      <p class="dek" style="margin:16px 0 0;font-size:13px">${esc(T.staffFoot)}</p>
-    </div>`;
-  $('#g').onclick = async () => {
-    $('#g').disabled = true;
-    $('#g').textContent = T.signingIn;
+    <p class="dek">${esc(T.doorSub)}</p>
+
+    ${card ? `
+      <div class="panel rowline" style="margin-top:22px;max-width:460px">
+        ${avatar(card.full_name, card.photo_path)}
+        <span class="grow">
+          <span style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)">${esc(T.managerOfShop)}</span><br>
+          <span style="font-size:18px;font-weight:600">${esc(card.full_name || '')}</span>
+          ${card.phone ? `<br><a class="sub2" style="color:var(--dim);text-decoration:none" href="tel:${esc(card.phone.replace(/[^0-9+]/g,''))}">${esc(card.phone)}</a>` : ''}
+        </span>
+      </div>` : ''}
+
+    <div class="stack" style="max-width:460px;margin-top:16px">
+      <button class="b" id="asBarber">${esc(T.doorBarber)}</button>
+      <button class="b ghost" id="asManager">${esc(T.doorManager)}</button>
+    </div>
+    <p class="dek" style="margin-top:16px;font-size:13px;max-width:460px">${esc(T.staffFoot)}</p>`;
+
+  const go = async (kind) => {
+    try { localStorage.setItem('rico.door', kind); } catch (e) { /* ignore */ }
     const { error } = await sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: SITE + '#/staff' }
+      provider: 'google', options: { redirectTo: SITE + '#/staff' }
     });
-    if (error) { $('#g').disabled = false; $('#g').textContent = T.google; toast(error.message, true); }
+    if (error) toast(error.message, true);
   };
+  $('#asBarber').onclick = () => go('barber');
+  $('#asManager').onclick = () => go('manager');
+}
+
+/* signed in with Google but not staff yet: ask for the code */
+function codeScreen() {
+  let kind = 'barber';
+  try { kind = localStorage.getItem('rico.door') === 'manager' ? 'manager' : 'barber'; } catch (e) { /* ignore */ }
+  const label = kind === 'manager' ? T.codeManager : T.codeBarber;
+
+  view.innerHTML = `
+    <h1 class="page">${esc(label)}</h1>
+    <p class="dek">${esc(T.signedInAs)} ${esc(me.email)}</p>
+    <div class="panel pad" style="max-width:420px;margin-top:18px">
+      <div class="field">
+        <label>${esc(T.yourNameQ)}</label>
+        <input id="myName" autocomplete="name" value="${esc(me.profile?.full_name || '')}">
+      </div>
+      <div class="field">
+        <label>${esc(label)}</label>
+        <input id="theCode" inputmode="numeric" maxlength="12" autocomplete="off"
+               style="font-size:26px;text-align:center;letter-spacing:.3em;direction:ltr" placeholder="••••••">
+      </div>
+      <button class="b" id="claim">${esc(T.finish)}</button>
+      <p class="dek" style="margin:14px 0 0;font-size:13px">${esc(T.codeHint)}</p>
+      <div class="center2" style="margin-top:10px">
+        <button class="b ghost sm" id="other">${esc(T.switchAccount)}</button>
+      </div>
+    </div>`;
+
+  const submit = async () => {
+    const code = $('#theCode').value.replace(/\D/g, '');
+    if (code.length < 4) return toast(T.wrongCode, true);
+    $('#claim').disabled = true;
+    const { error } = await sb.rpc('claim_role',
+      { p_kind: kind, p_code: code, p_name: $('#myName').value.trim() });
+    $('#claim').disabled = false;
+    if (error) { $('#theCode').value = ''; return toast(error.message, true); }
+    staffView();
+  };
+  $('#claim').onclick = submit;
+  $('#theCode').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+  $('#other').onclick = async () => { await sb.auth.signOut(); doorScreen(); };
+  $('#theCode').focus();
 }
 
 async function barberView() {
@@ -445,6 +509,8 @@ async function barberView() {
   const addr = pick('address');
   const pickedLabel = new Date(calPicked + 'T12:00:00').toLocaleDateString(T.locale,
     { weekday: 'long', day: 'numeric', month: 'long' });
+  const tomorrowISO = dayISO(1);
+  const tomorrowList = list.filter(a => shopDay(a.starts_at) === tomorrowISO);
 
   const wa = (ph) => 'https://wa.me/' + ph.replace(/[^0-9]/g, '').replace(/^0/, '972');
 
@@ -454,6 +520,21 @@ async function barberView() {
       <button class="b ghost sm" id="out">${esc(T.signOut)}</button>
     </div>
     <p class="dek">${list.filter(a => shopDay(a.starts_at) === todayISO()).length} ${esc(T.apptsToday)}</p>
+
+    <h2 class="sec">${esc(T.tomorrow)} · ${esc(new Date(tomorrowISO + 'T12:00:00').toLocaleDateString(T.locale, { weekday: 'long', day: 'numeric', month: 'long' }))}</h2>
+    ${tomorrowList.length ? `
+      ${tomorrowList.map(a => `
+        <div class="appt">
+          <span class="time">${fmtTime(a.starts_at)}</span>
+          <span class="grow">
+            <span class="who2">${esc(a.customer_name)}</span>
+            <span class="meta">${esc(a.customer_phone)}</span>
+          </span>
+          <a class="b sm" target="_blank" rel="noopener"
+             href="${esc(remindLink(a, p.full_name))}">${esc(T.remind)}</a>
+        </div>`).join('')}
+      <p class="dek" style="font-size:13px;margin-top:4px">${esc(T.remindHint)}</p>
+    ` : `<p class="dek">${esc(T.noTomorrow)}</p>`}
 
     <h2 class="sec">${esc(T.calendar)}</h2>
     <div id="calBox">${calendarHTML(list, offDays)}</div>
@@ -668,22 +749,47 @@ async function managerView() {
           ${avatar(u.full_name || u.email, u.photo_path)}
           <span class="grow">
             <span style="font-size:17px;font-weight:600">${esc(u.full_name || u.email)}</span><br>
-            <span style="color:var(--dim);font-size:13px">${esc(u.email)} · ${esc(u.joined ? T.joined : T.pending)}</span>
+            <span style="color:var(--dim);font-size:13px">${esc(u.email)}</span>
           </span>
           ${u.role === 'manager' ? `<span class="tag">${esc(T.manager)}</span>` :
-            `<button class="b danger sm" data-rm="${esc(u.email)}">${esc(T.removeBarber)}</button>`}
+            `<button class="b danger sm" data-rm="${esc(u.user_id)}">${esc(T.removeBarber)}</button>`}
         </div>`).join('')}
     </div>
 
-    <div class="panel pad" style="margin-top:12px">
+    <h2 class="sec">${esc(T.codes)}</h2>
+    <div class="panel pad">
+      <p class="dek" style="margin-top:0;font-size:13px">${esc(T.codeHint2)}</p>
       <div class="two">
-        <div class="field"><label>${esc(T.inviteName)}</label><input id="newName"></div>
-        <div class="field"><label>${esc(T.inviteEmail)}</label><input id="newMail" type="email" inputmode="email" placeholder="name@gmail.com"></div>
+        <div class="field"><label>${esc(T.barberCodeLbl)}</label>
+          <input id="codeBarber" inputmode="numeric" maxlength="12" placeholder="${esc(T.codeRule)}"></div>
+        <div class="field"><label>${esc(T.managerCodeLbl)}</label>
+          <input id="codeManager" inputmode="numeric" maxlength="12" placeholder="${esc(T.codeRule)}"></div>
       </div>
-      <button class="b" id="addBarber">${esc(T.invite)}</button>
+      <button class="b" id="saveCodes">${esc(T.newCode)}</button>
     </div>
 
     <details class="fold" style="margin-top:34px">
+      <summary>${esc(T.myProfile)}</summary>
+      <div class="inner">
+        <div class="rowline" style="margin-bottom:14px">
+          ${avatar(me.profile?.full_name, me.profile?.photo_path, 'lg')}
+          <div class="grow field" style="margin:0">
+            <label>${esc(T.photo)}</label>
+            <input type="file" id="photo" accept="image/jpeg,image/png,image/webp">
+          </div>
+        </div>
+        <div class="two">
+          <div class="field"><label>${esc(T.fullName)}</label><input id="mName" value="${esc(me.profile?.full_name || '')}"></div>
+          <div class="field"><label>${esc(T.phone)}</label><input id="mPhone" inputmode="tel" value="${esc(me.profile?.phone || '')}"></div>
+        </div>
+        <div class="field"><label>${esc(T.showPhone)}</label>
+          <select id="mShow"><option value="1"${me.profile?.show_phone !== false ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${me.profile?.show_phone === false ? ' selected' : ''}>${esc(T.no)}</option></select>
+        </div>
+        <button class="b" id="saveMe">${esc(T.save)}</button>
+      </div>
+    </details>
+
+    <details class="fold">
       <summary>${esc(T.website)}</summary>
       <div class="inner">
         <div class="two">
@@ -715,6 +821,10 @@ async function managerView() {
         <h2 class="sec">${esc(T.openHours)}</h2>
         <div id="shopHours"></div>
 
+        <h2 class="sec">${esc(T.reviews)}</h2>
+        <div id="revRows"></div>
+        <button class="b ghost sm" id="addRev">${esc(T.addReview)}</button>
+
         <h2 class="sec">${esc(T.gallery)}</h2>
         <div class="gal" id="gal"></div>
         <div class="field" style="margin-top:12px">
@@ -739,19 +849,43 @@ async function managerView() {
   wireCancels(managerView);
   wireCalendar(managerView);
 
-  $('#addBarber').onclick = async () => {
-    const email = $('#newMail').value.trim();
-    if (!email) return toast('invalid email', true);
-    $('#addBarber').disabled = true;
-    const { error } = await sb.rpc('add_staff',
-      { p_email: email, p_name: $('#newName').value.trim(), p_role: 'barber' });
-    $('#addBarber').disabled = false;
+  $('#saveMe').onclick = async () => {
+    const f = $('#photo').files[0];
+    let photo_path = me.profile?.photo_path || null;
+    if (f) {
+      if (f.size > 3 * 1024 * 1024) return toast('3MB', true);
+      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const next = `${me.id}/avatar-${Date.now()}.${ext}`;
+      const up = await sb.storage.from('photos').upload(next, f, { contentType: f.type });
+      if (up.error) return toast(up.error.message, true);
+      if (photo_path && photo_path !== next) await sb.storage.from('photos').remove([photo_path]);
+      photo_path = next;
+    }
+    const { error } = await sb.from('profiles').update({
+      full_name: $('#mName').value.trim(),
+      phone: $('#mPhone').value.trim(),
+      show_phone: $('#mShow').value === '1',
+      photo_path
+    }).eq('id', me.id);
     if (error) return toast(error.message, true);
-    toast(T.saved); managerView();
+    toast(f ? T.photoChanged : T.saved);
+    staffView();
+  };
+
+  $('#saveCodes').onclick = async () => {
+    const jobs = [];
+    if ($('#codeBarber').value.trim())  jobs.push(['barber',  $('#codeBarber').value.trim()]);
+    if ($('#codeManager').value.trim()) jobs.push(['manager', $('#codeManager').value.trim()]);
+    if (!jobs.length) return;
+    for (const [kind, code] of jobs) {
+      const { error } = await sb.rpc('set_code', { p_kind: kind, p_code: code });
+      if (error) return toast(error.message, true);
+    }
+    toast(T.codeSaved); managerView();
   };
   $$('[data-rm]').forEach(b => b.onclick = async () => {
     if (!confirm(T.confirmRemove)) return;
-    const { error } = await sb.rpc('remove_staff', { p_email: b.dataset.rm });
+    const { error } = await sb.rpc('remove_staff', { p_user: b.dataset.rm });
     if (error) return toast(error.message, true);
     toast(T.saved); managerView();
   });
@@ -760,6 +894,7 @@ async function managerView() {
   let services = parseJSON(c.services_json, []);
   let hours = parseJSON(c.hours_json, []);
   let gallery = parseJSON(c.gallery_json, []).map(s => typeof s === 'string' ? { p: s } : s);
+  let reviews = parseJSON(c.reviews_json, []);
 
   const drawSvc = () => {
     $('#svcRows').innerHTML = services.map((s, i) => `
@@ -817,7 +952,28 @@ async function managerView() {
       en: $('[data-f=en]', row).value.trim()
     }));
   };
-  drawSvc(); drawShopHours(); drawGal();
+  const drawRev = () => {
+    $('#revRows').innerHTML = reviews.map((r, i) => `
+      <div class="panel" data-rev="${i}" style="margin-bottom:8px">
+        <div class="rowline" style="gap:10px">
+          <input data-f="name" style="flex:2" placeholder="${esc(T.revName)}" value="${esc(r.name || '')}">
+          <input data-f="stars" style="flex:0 0 70px" inputmode="numeric" placeholder="${esc(T.revStars)}" value="${esc(String(r.stars ?? 5))}">
+          <button class="b ghost sm" data-delrev="${i}">${esc(T.remove)}</button>
+        </div>
+        <textarea data-f="text" style="margin-top:10px" placeholder="${esc(T.revText)}">${esc(r.text || '')}</textarea>
+      </div>`).join('');
+    $$('[data-delrev]').forEach(b => b.onclick = () => { readRev(); reviews.splice(+b.dataset.delrev, 1); drawRev(); });
+  };
+  const readRev = () => {
+    reviews = $$('[data-rev]').map((row, i) => ({
+      name: $('[data-f=name]', row).value.trim(),
+      stars: Math.max(1, Math.min(5, parseInt($('[data-f=stars]', row).value || '5', 10))),
+      text: $('[data-f=text]', row).value.trim(),
+      src: reviews[+row.dataset.rev]?.src || T.onGoogle
+    })).filter(r => r.name || r.text);
+  };
+  drawSvc(); drawShopHours(); drawGal(); drawRev();
+  $('#addRev').onclick = () => { readRev(); reviews.push({ name: '', stars: 5, text: '', src: T.onGoogle }); drawRev(); };
   $('#addSvc').onclick = () => { readSvc(); services.push({ he: '', en: '', price: '', min: '30' }); drawSvc(); };
 
   $('#galFiles').onchange = async () => {
@@ -833,11 +989,12 @@ async function managerView() {
   };
 
   $('#saveSite').onclick = async () => {
-    readSvc(); readShopHours(); readGal();
+    readSvc(); readShopHours(); readGal(); readRev();
     const body = {
       services_json: JSON.stringify(services),
       hours_json: JSON.stringify(hours),
-      gallery_json: JSON.stringify(gallery)
+      gallery_json: JSON.stringify(gallery),
+      reviews_json: JSON.stringify(reviews)
     };
     ['tagline_he', 'tagline_en', 'about_he', 'about_en', 'address_he', 'address_en',
      'phone', 'whatsapp', 'instagram', 'maps_url', 'years', 'policy_he', 'policy_en']

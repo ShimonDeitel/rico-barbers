@@ -543,3 +543,15 @@ details.fold .inner { padding: 0 18px 18px; }
 .cday .pips { display: flex; gap: 2px; }
 .cday .pips i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .7; }
 @media (max-width: 520px) { .cday { font-size: 13px; border-radius: 10px; } }
+
+
+/* ============ reviews ============ */
+.revgrid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .revgrid { grid-template-columns: repeat(2, 1fr); } }
+.rev {
+  margin: 0; border: 1px solid var(--hair); border-radius: 18px; padding: 22px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.rev .stars { font-size: 13px; letter-spacing: .3em; }
+.rev blockquote { margin: 0; font-size: clamp(16px, 2.2vw, 20px); font-weight: 300; line-height: 1.45; }
+.rev figcaption { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
