@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260731012732';
+} from './ui.js?v=20260731013531';
 
 const home = $('#home');
 const view = $('#view');
@@ -492,6 +492,14 @@ function askCode(kind) {
     e.target.value = e.target.value.toUpperCase();
     e.target.setSelectionRange(at, at);
   };
+  /* a copied code drags its label along with it; keep only the code itself */
+  $('#theCode').addEventListener('paste', (e) => {
+    const raw = (e.clipboardData || window.clipboardData || {}).getData?.('text') || '';
+    const tok = raw.match(/[A-Za-z]{2}[^A-Za-z0-9]?[A-Za-z0-9]{6,24}/);
+    if (!tok) return;
+    e.preventDefault();
+    e.target.value = tok[0].toUpperCase();
+  });
   $('#theCode').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
   $('#back').onclick = doorScreen;
   $('#theCode').focus();
