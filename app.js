@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL
-} from './ui.js';
+} from './ui.js?v=202607301943';
 
 const home = $('#home');
 const view = $('#view');
