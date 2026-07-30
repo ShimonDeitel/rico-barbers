@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260731013531';
+} from './ui.js?v=20260731015631';
 
 const home = $('#home');
 const view = $('#view');
@@ -133,7 +133,13 @@ const loadRefs = () => { try { return JSON.parse(localStorage.getItem(REFS_KEY) 
 const saveRefs = (a) => { try { localStorage.setItem(REFS_KEY, JSON.stringify(a.slice(-20))); } catch (e) { /* ignore */ } };
 
 let barbers = [];
-let pickd = { barber: null, day: todayISO(), slot: null, name: '', phone: '' };
+let pickd = { barber: null, day: todayISO(), slot: null, mins: null, name: '', phone: '' };
+
+const lengthsOf = (id) => {
+  const b = barbers.find(x => x.id === id);
+  const o = (b && b.slot_options) || [];
+  return o.length ? o : [b?.slot_minutes || 30];
+};
 
 async function bookView() {
   view.innerHTML = `<h1 class="page">${esc(T.bookTitle)}</h1><p class="dek">${esc(T.loading)}</p>`;
@@ -181,12 +187,13 @@ async function bookView() {
           ${avatar(b.full_name, b.photo_path)}
           <span class="grow">
             <span class="name">${esc(b.full_name || '')}</span><br>
-            <span class="sub2">${esc(b.bio || '')}${b.bio ? ' · ' : ''}${b.slot_minutes} ${esc(T.minutes)}</span>
+            <span class="sub2">${esc(b.bio || '')}${b.bio ? ' · ' : ''}${esc(lengthsOf(b.id).join(' / '))} ${esc(T.minutes)}</span>
           </span>
         </button>`).join('')}
     </div>
 
     <div id="rest" class="${pickd.barber ? '' : 'hide'}">
+      <div id="lenBox"></div>
       <h2 class="sec">${esc(T.chooseDay)}</h2>
       <div class="chips" id="days"></div>
       <h2 class="sec">${esc(T.chooseTime)}</h2>
@@ -211,13 +218,30 @@ async function bookView() {
   });
 
   $$('[data-b]').forEach(el => el.onclick = () => {
-    pickd.barber = el.dataset.b; pickd.slot = null;
+    pickd.barber = el.dataset.b; pickd.slot = null; pickd.mins = null;
     $$('.choice').forEach(c => c.classList.toggle('on', c.dataset.b === pickd.barber));
     $('#rest').classList.remove('hide');
-    drawDays(); loadSlots();
+    drawLengths(); drawDays(); loadSlots();
   });
 
-  if (pickd.barber) { drawDays(); loadSlots(); }
+  if (pickd.barber) { drawLengths(); drawDays(); loadSlots(); }
+}
+
+/* only worth asking when the barber actually offers a choice */
+function drawLengths() {
+  const box = $('#lenBox');
+  if (!box) return;
+  const opts = lengthsOf(pickd.barber);
+  if (!pickd.mins || !opts.includes(pickd.mins)) pickd.mins = opts[0];
+  if (opts.length < 2) { box.innerHTML = ''; return; }
+  box.innerHTML = `<h2 class="sec">${esc(T.chooseLength)}</h2>
+    <div class="chips">${opts.map(m =>
+      `<button class="chip ${m === pickd.mins ? 'on' : ''}" data-m="${m}">${m} ${esc(T.minutes)}</button>`).join('')}</div>`;
+  $$('[data-m]', box).forEach(b => b.onclick = () => {
+    pickd.mins = +b.dataset.m; pickd.slot = null;
+    $$('.chip', box).forEach(c => c.classList.toggle('on', +c.dataset.m === pickd.mins));
+    loadSlots();
+  });
 }
 
 function drawDays() {
@@ -238,7 +262,8 @@ function drawDays() {
 async function loadSlots() {
   const box = $('#slots');
   box.className = 'dek'; box.textContent = T.loading;
-  const { data, error } = await sb.rpc('available_slots', { p_barber: pickd.barber, p_day: pickd.day });
+  const { data, error } = await sb.rpc('available_slots',
+    { p_barber: pickd.barber, p_day: pickd.day, p_minutes: pickd.mins });
   if (error) { box.textContent = error.message; return; }
   const slots = data || [];
   $('#details').classList.add('hide');
@@ -261,7 +286,8 @@ async function confirmBooking() {
   $('#go').disabled = true;
   const { data, error } = await sb.rpc('book_public', {
     p_barber: pickd.barber, p_start: pickd.slot, p_name: name,
-    p_phone: phone, p_notes: $('#cnotes').value.trim(), p_lang: lang
+    p_phone: phone, p_notes: $('#cnotes').value.trim(), p_lang: lang,
+    p_minutes: pickd.mins
   });
   $('#go').disabled = false;
   if (error) return toast(error.message, true);
@@ -563,12 +589,13 @@ function noAccessScreen() {
 }
 
 async function barberView() {
-  const [appts, avail, off] = await Promise.all([
+  const [appts, avail, off, team] = await Promise.all([
     sb.from('appointments').select('*').eq('barber_id', me.id).eq('status', 'booked')
       .gte('starts_at', new Date(Date.now() - 40 * 864e5).toISOString())
       .lte('starts_at', new Date(Date.now() + 70 * 864e5).toISOString()).order('starts_at'),
     sb.from('availability').select('*').eq('barber_id', me.id).order('weekday'),
-    sb.from('time_off').select('*').eq('barber_id', me.id).gte('day', todayISO()).order('day')
+    sb.from('time_off').select('*').eq('barber_id', me.id).gte('day', todayISO()).order('day'),
+    sb.rpc('list_team')
   ]);
 
   const list = appts.data || [];
@@ -625,23 +652,17 @@ async function barberView() {
         <button class="b danger sm" data-cancel="${a.id}">${esc(T.cancel)}</button>
       </div>`).join('') : `<p class="dek">${esc(offDays.includes(calPicked) ? T.freeDay : T.noneThatDay)}</p>`}
 
+    ${teamHTML(team.data || [])}
+
     <details class="fold" style="margin-top:34px">
       <summary>${esc(T.myProfile)}</summary>
       <div class="inner">
-        <div class="rowline" style="margin-bottom:14px">
-          ${avatar(p.full_name, p.photo_path, 'lg')}
-          <div class="grow field" style="margin:0">
-            <label>${esc(T.photo)}</label>
-            <input type="file" id="photo" accept="image/jpeg,image/png,image/webp">
-          </div>
-        </div>
+        ${photoFieldHTML(p)}
+        <div class="field"><label>${esc(T.fullName)}</label><input id="bName" value="${esc(p.full_name || '')}"></div>
         <div class="field"><label>${esc(T.about)}</label><textarea id="bio">${esc(p.bio || '')}</textarea></div>
-        <div class="two">
-          <div class="field"><label>${esc(T.apptLength)}</label>
-            <input id="slotmin" type="number" min="10" max="180" step="5" value="${p.slot_minutes || 30}"></div>
-          <div class="field"><label>${esc(T.shownToCustomers)}</label>
-            <select id="active"><option value="1"${p.active ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${p.active ? '' : ' selected'}>${esc(T.no)}</option></select></div>
-        </div>
+        ${lengthsHTML()}
+        <div class="field"><label>${esc(T.shownToCustomers)}</label>
+          <select id="active"><option value="1"${p.active ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${p.active ? '' : ' selected'}>${esc(T.no)}</option></select></div>
         <button class="b" id="saveProfile">${esc(T.save)}</button>
       </div>
     </details>
@@ -666,37 +687,136 @@ async function barberView() {
   $('#out').onclick = async () => { await sb.auth.signOut(); staffView(); };
   wireCancels(barberView);
   wireCalendar(barberView);
+  wireTeam(barberView);
+  wirePhotoPreview();
+  wireLengths(p.slot_options && p.slot_options.length ? p.slot_options : [p.slot_minutes || 30]);
   drawWorkHours(avail.data || [], me.id, barberView);
   drawDaysOff(off.data || [], barberView);
 
   $('#saveProfile').onclick = async () => {
-    const f = $('#photo').files[0];
-    let photo_path = p.photo_path || null;
-    if (f) {
-      if (f.size > 3 * 1024 * 1024) return toast('3MB', true);
-      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
-      // a fresh name every time: the bucket is CDN-cached, so overwriting one
-      // path would keep serving the old picture
-      const next = `${me.id}/avatar-${Date.now()}.${ext}`;
-      const up = await sb.storage.from('photos').upload(next, f, { contentType: f.type });
-      if (up.error) return toast(up.error.message, true);
-      if (photo_path && photo_path !== next) {
-        await sb.storage.from('photos').remove([photo_path]);   // no orphans left behind
-      }
-      photo_path = next;
-    }
+    const shot = await uploadPhoto(p.photo_path);
+    if (!shot) return;
     const { error } = await sb.from('profiles').update({
+      full_name: $('#bName').value.trim(),
       bio: $('#bio').value.trim(),
-      slot_minutes: Math.max(10, Math.min(180, parseInt($('#slotmin').value || '30', 10))),
+      slot_options: myLens,
+      slot_minutes: myLens[0] || 30,
       active: $('#active').value === '1',
-      photo_path
+      photo_path: shot.path
     }).eq('id', me.id);
     if (error) return toast(error.message, true);
-    toast(f ? T.photoChanged : T.saved);
-    me.profile = { ...p, photo_path };
+    toast(shot.changed ? T.photoChanged : T.saved);
+    me.profile = { ...p, photo_path: shot.path };
+    forgetCachedFaces();
     staffView();
   };
 }
+
+/* ---- pieces both dashboards share ---- */
+
+/* The whole team, and the door out of it. Everyone can remove everyone,
+   the owner included; the code is what lets anyone back in. */
+function teamHTML(rows) {
+  return `
+    <h2 class="sec">${esc(T.team)}</h2>
+    <p class="dek" style="margin:-6px 0 12px;font-size:13px">${esc(T.teamHint)}</p>
+    <div class="stack">
+      ${rows.map(u => `
+        <div class="panel rowline">
+          ${avatar(u.full_name || u.email, u.photo_path)}
+          <span class="grow">
+            <span style="font-size:17px;font-weight:600">${esc(u.full_name || u.email)}</span><br>
+            <span style="color:var(--dim);font-size:13px">${esc(u.email)}${u.user_id === me.id ? ' · ' + esc(T.you) : ''}</span>
+          </span>
+          ${u.role === 'manager' ? `<span class="tag">${esc(T.manager)}</span>` : ''}
+          <button class="b danger sm" data-rm="${esc(u.user_id)}">${esc(T.removeBarber)}</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+function wireTeam(after) {
+  $$('[data-rm]').forEach(b => b.onclick = async () => {
+    const self = b.dataset.rm === me.id;
+    if (!confirm(self ? T.confirmRemoveSelf : T.confirmRemove)) return;
+    b.disabled = true;
+    const { error } = await sb.rpc('remove_staff', { p_user: b.dataset.rm });
+    if (error) { b.disabled = false; return toast(error.message, true); }
+    if (self) { await sb.auth.signOut(); me = { id: null, role: null, profile: null, email: null }; return staffView(); }
+    toast(T.saved); after();
+  });
+}
+
+/* Appointment lengths: a list, not a number. One entry and the customer is
+   never asked; several and they choose. */
+let myLens = [];
+function lengthsHTML() {
+  return `
+    <div class="field">
+      <label>${esc(T.lengths)}</label>
+      <div class="chips" id="lenChips"></div>
+      <div class="rowline" style="gap:8px;margin-top:10px">
+        <input id="lenNew" type="number" min="5" max="240" step="5" placeholder="30" style="flex:0 0 110px">
+        <button class="b ghost sm" id="lenAdd" type="button">${esc(T.addLength)}</button>
+      </div>
+      <p class="dek" style="font-size:13px;margin:8px 0 0">${esc(T.lengthsHint)}</p>
+    </div>`;
+}
+function wireLengths(initial) {
+  myLens = [...new Set((initial || []).filter(n => n >= 5 && n <= 240))].sort((a, b) => a - b);
+  const draw = () => {
+    $('#lenChips').innerHTML = myLens.length
+      ? myLens.map(m => `<button class="chip on" type="button" data-dellen="${m}">${m} ${esc(T.minutes)} ✕</button>`).join('')
+      : `<span class="dek" style="font-size:13px">${esc(T.none)}</span>`;
+    $$('[data-dellen]').forEach(b => b.onclick = () => {
+      myLens = myLens.filter(m => m !== +b.dataset.dellen); draw();
+    });
+  };
+  $('#lenAdd').onclick = () => {
+    const n = parseInt($('#lenNew').value || '0', 10);
+    if (!(n >= 5 && n <= 240)) return;
+    if (!myLens.includes(n)) myLens = [...myLens, n].sort((a, b) => a - b);
+    $('#lenNew').value = ''; draw();
+  };
+  draw();
+}
+
+/* one photo field, one uploader, and every cached copy dropped afterwards */
+function photoFieldHTML(p) {
+  return `
+    <div class="rowline" style="margin-bottom:14px">
+      <span id="photoPrev">${avatar(p?.full_name, p?.photo_path, 'lg')}</span>
+      <div class="grow field" style="margin:0">
+        <label>${esc(T.photo)}</label>
+        <input type="file" id="photo" accept="image/jpeg,image/png,image/webp">
+        <p class="dek" style="font-size:13px;margin:8px 0 0">${esc(T.photoNow)}</p>
+      </div>
+    </div>`;
+}
+function wirePhotoPreview() {
+  const inp = $('#photo');
+  if (!inp) return;
+  inp.onchange = () => {
+    const f = inp.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    $('#photoPrev').innerHTML = `<img class="pic lg" src="${url}" alt="">`;
+  };
+}
+async function uploadPhoto(current) {
+  const f = $('#photo')?.files[0];
+  if (!f) return { path: current || null, changed: false };
+  if (f.size > 3 * 1024 * 1024) { toast('3MB', true); return null; }
+  const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+  // a fresh name every time: the bucket is CDN-cached, so overwriting one
+  // path would keep serving the old picture
+  const next = `${me.id}/avatar-${Date.now()}.${ext}`;
+  const up = await sb.storage.from('photos').upload(next, f, { contentType: f.type });
+  if (up.error) { toast(up.error.message, true); return null; }
+  if (current && current !== next) await sb.storage.from('photos').remove([current]);
+  return { path: next, changed: true };
+}
+/* the new face has to reach the booking page too, not just this screen */
+function forgetCachedFaces() { barbers = []; }
 
 function wireCancels(after) {
   $$('[data-cancel]').forEach(b => b.onclick = async () => {
@@ -787,6 +907,8 @@ async function managerView() {
   const dayList = all.filter(a => shopDay(a.starts_at) === calPicked);
   const todays = all.filter(a => shopDay(a.starts_at) === todayISO());
   const c = cfg.data || {};
+  /* a manager does not have to be one of the barbers */
+  const cuts = me.profile?.active !== false;
   const pickedLabel = new Date(calPicked + 'T12:00:00').toLocaleDateString(T.locale,
     { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -799,7 +921,7 @@ async function managerView() {
     <div class="tiles" style="margin-top:18px">
       <div class="tile"><b>${todays.length}</b><span>${esc(T.statToday)}</span></div>
       <div class="tile"><b>${all.filter(a => a.starts_at >= start && a.starts_at <= weekEnd).length}</b><span>${esc(T.statWeek)}</span></div>
-      <div class="tile"><b>${rows.filter(r => r.role === 'barber').length}</b><span>${esc(T.statBarbers)}</span></div>
+      <div class="tile"><b>${rows.filter(r => r.active).length}</b><span>${esc(T.statBarbers)}</span></div>
     </div>
 
     <h2 class="sec">${esc(T.calendar)}</h2>
@@ -814,28 +936,24 @@ async function managerView() {
         <button class="b danger sm" data-cancel="${a.id}">${esc(T.cancel)}</button>
       </div>`).join('') : `<p class="dek">${esc(T.noneThatDay)}</p>`}
 
-    <h2 class="sec">${esc(T.team)}</h2>
-    <div class="stack">
-      ${rows.map(u => `
-        <div class="panel rowline">
-          ${avatar(u.full_name || u.email, u.photo_path)}
-          <span class="grow">
-            <span style="font-size:17px;font-weight:600">${esc(u.full_name || u.email)}</span><br>
-            <span style="color:var(--dim);font-size:13px">${esc(u.email)}</span>
-          </span>
-          ${u.role === 'manager' ? `<span class="tag">${esc(T.manager)}</span>` :
-            `<button class="b danger sm" data-rm="${esc(u.user_id)}">${esc(T.removeBarber)}</button>`}
-        </div>`).join('')}
-    </div>
+    ${teamHTML(rows)}
 
     <h2 class="sec">${esc(T.codes)}</h2>
     <div class="panel pad">
       <p class="dek" style="margin-top:0;font-size:13px">${esc(T.codeHint2)}</p>
+      <div class="field">
+        <label>${esc(T.currentCode)}</label>
+        <input id="codeNow" autocomplete="off" spellcheck="false" autocapitalize="characters"
+               autocorrect="off" maxlength="40" style="direction:ltr">
+        <p class="dek" style="font-size:13px;margin:8px 0 0">${esc(T.currentCodeHint)}</p>
+      </div>
       <div class="two">
         <div class="field"><label>${esc(T.barberCodeLbl)}</label>
-          <input id="codeBarber" inputmode="numeric" maxlength="12" placeholder="${esc(T.codeRule)}"></div>
+          <input id="codeBarber" autocomplete="off" spellcheck="false" autocapitalize="characters"
+                 autocorrect="off" maxlength="32" style="direction:ltr" placeholder="${esc(T.codeRule)}"></div>
         <div class="field"><label>${esc(T.managerCodeLbl)}</label>
-          <input id="codeManager" inputmode="numeric" maxlength="12" placeholder="${esc(T.codeRule)}"></div>
+          <input id="codeManager" autocomplete="off" spellcheck="false" autocapitalize="characters"
+                 autocorrect="off" maxlength="32" style="direction:ltr" placeholder="${esc(T.codeRule)}"></div>
       </div>
       <button class="b" id="saveCodes">${esc(T.newCode)}</button>
     </div>
@@ -843,13 +961,7 @@ async function managerView() {
     <details class="fold" style="margin-top:34px">
       <summary>${esc(T.myProfile)}</summary>
       <div class="inner">
-        <div class="rowline" style="margin-bottom:14px">
-          ${avatar(me.profile?.full_name, me.profile?.photo_path, 'lg')}
-          <div class="grow field" style="margin:0">
-            <label>${esc(T.photo)}</label>
-            <input type="file" id="photo" accept="image/jpeg,image/png,image/webp">
-          </div>
-        </div>
+        ${photoFieldHTML(me.profile)}
         <div class="two">
           <div class="field"><label>${esc(T.fullName)}</label><input id="mName" value="${esc(me.profile?.full_name || '')}"></div>
           <div class="field"><label>${esc(T.phone)}</label><input id="mPhone" inputmode="tel" value="${esc(me.profile?.phone || '')}"></div>
@@ -857,17 +969,18 @@ async function managerView() {
         <div class="field"><label>${esc(T.showPhone)}</label>
           <select id="mShow"><option value="1"${me.profile?.show_phone !== false ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${me.profile?.show_phone === false ? ' selected' : ''}>${esc(T.no)}</option></select>
         </div>
-        <div class="two">
-          <div class="field"><label>${esc(T.apptLength)}</label>
-            <input id="mSlot" type="number" min="10" max="180" step="5" value="${me.profile?.slot_minutes || 30}"></div>
-          <div class="field"><label>${esc(T.shownToCustomers)}</label>
-            <select id="mActive"><option value="1"${me.profile?.active !== false ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${me.profile?.active === false ? '' : ''}>${esc(T.no)}</option></select></div>
+        <div class="field">
+          <label>${esc(T.alsoCuts)}</label>
+          <select id="mActive"><option value="1"${cuts ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${cuts ? '' : ' selected'}>${esc(T.no)}</option></select>
+          <p class="dek" style="font-size:13px;margin:8px 0 0">${esc(T.alsoCutsHint)}</p>
         </div>
+        ${cuts ? lengthsHTML() : ''}
         <div class="field"><label>${esc(T.about)}</label><textarea id="mBio">${esc(me.profile?.bio || '')}</textarea></div>
         <button class="b" id="saveMe">${esc(T.save)}</button>
       </div>
     </details>
 
+    ${cuts ? `
     <details class="fold">
       <summary>${esc(T.myHours)}</summary>
       <div class="inner" id="hoursBox"></div>
@@ -883,7 +996,7 @@ async function managerView() {
         </div>
         <button class="b ghost" id="addOff">${esc(T.addDayOff)}</button>
       </div>
-    </details>
+    </details>` : ''}
 
     <details class="fold">
       <summary>${esc(T.website)}</summary>
@@ -944,52 +1057,49 @@ async function managerView() {
   $('#out').onclick = async () => { await sb.auth.signOut(); staffView(); };
   wireCancels(managerView);
   wireCalendar(managerView);
-  drawWorkHours(myAvail.data || [], me.id, managerView);
-  drawDaysOff(myOff.data || [], managerView);
+  wireTeam(managerView);
+  wirePhotoPreview();
+  if (cuts) {
+    wireLengths(me.profile?.slot_options?.length ? me.profile.slot_options : [me.profile?.slot_minutes || 30]);
+    drawWorkHours(myAvail.data || [], me.id, managerView);
+    drawDaysOff(myOff.data || [], managerView);
+  }
 
   $('#saveMe').onclick = async () => {
-    const f = $('#photo').files[0];
-    let photo_path = me.profile?.photo_path || null;
-    if (f) {
-      if (f.size > 3 * 1024 * 1024) return toast('3MB', true);
-      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const next = `${me.id}/avatar-${Date.now()}.${ext}`;
-      const up = await sb.storage.from('photos').upload(next, f, { contentType: f.type });
-      if (up.error) return toast(up.error.message, true);
-      if (photo_path && photo_path !== next) await sb.storage.from('photos').remove([photo_path]);
-      photo_path = next;
-    }
-    const { error } = await sb.from('profiles').update({
+    const shot = await uploadPhoto(me.profile?.photo_path);
+    if (!shot) return;
+    const nowCuts = $('#mActive').value === '1';
+    const patch = {
       full_name: $('#mName').value.trim(),
       phone: $('#mPhone').value.trim(),
       show_phone: $('#mShow').value === '1',
       bio: $('#mBio').value.trim(),
-      slot_minutes: Math.max(10, Math.min(180, parseInt($('#mSlot').value || '30', 10))),
-      active: $('#mActive').value === '1',
-      photo_path
-    }).eq('id', me.id);
+      active: nowCuts,
+      photo_path: shot.path
+    };
+    if (cuts && nowCuts) { patch.slot_options = myLens; patch.slot_minutes = myLens[0] || 30; }
+    const { error } = await sb.from('profiles').update(patch).eq('id', me.id);
     if (error) return toast(error.message, true);
-    toast(f ? T.photoChanged : T.saved);
+    toast(shot.changed ? T.photoChanged : T.saved);
+    me.profile = { ...me.profile, ...patch };
+    forgetCachedFaces();
     staffView();
   };
 
   $('#saveCodes').onclick = async () => {
+    const current = $('#codeNow').value.trim();
     const jobs = [];
     if ($('#codeBarber').value.trim())  jobs.push(['barber',  $('#codeBarber').value.trim()]);
     if ($('#codeManager').value.trim()) jobs.push(['manager', $('#codeManager').value.trim()]);
     if (!jobs.length) return;
+    if (!current) return toast(T.needCurrentCode, true);
+    $('#saveCodes').disabled = true;
     for (const [kind, code] of jobs) {
-      const { error } = await sb.rpc('set_code', { p_kind: kind, p_code: code });
-      if (error) return toast(error.message, true);
+      const { error } = await sb.rpc('set_code', { p_kind: kind, p_code: code, p_current: current });
+      if (error) { $('#saveCodes').disabled = false; return toast(error.message, true); }
     }
     toast(T.codeSaved); managerView();
   };
-  $$('[data-rm]').forEach(b => b.onclick = async () => {
-    if (!confirm(T.confirmRemove)) return;
-    const { error } = await sb.rpc('remove_staff', { p_user: b.dataset.rm });
-    if (error) return toast(error.message, true);
-    toast(T.saved); managerView();
-  });
 
   /* website content */
   let services = parseJSON(c.services_json, []);
