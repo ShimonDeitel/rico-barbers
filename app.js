@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260730211203';
+} from './ui.js?v=20260731003642';
 
 const home = $('#home');
 const view = $('#view');
@@ -750,13 +750,15 @@ async function managerView() {
   const start = new Date(todayISO() + 'T00:00:00Z').toISOString();
   const weekEnd = new Date(Date.now() + 7 * 864e5).toISOString();
   const monthEnd = new Date(Date.now() + 70 * 864e5).toISOString();
-  const [team, appts, cfg, sec] = await Promise.all([
+  const [team, appts, cfg, sec, myAvail, myOff] = await Promise.all([
     sb.rpc('list_team'),
     sb.from('appointments').select('*').eq('status', 'booked')
       .gte('starts_at', new Date(Date.now() - 40 * 864e5).toISOString())
       .lte('starts_at', monthEnd).order('starts_at'),
     sb.rpc('get_settings'),
-    sb.rpc('recent_security', { p_limit: 8 })
+    sb.rpc('recent_security', { p_limit: 8 }),
+    sb.from('availability').select('*').eq('barber_id', me.id).order('weekday'),
+    sb.from('time_off').select('*').eq('barber_id', me.id).gte('day', todayISO()).order('day')
   ]);
   if (team.error) return toast(team.error.message, true);
 
@@ -837,7 +839,31 @@ async function managerView() {
         <div class="field"><label>${esc(T.showPhone)}</label>
           <select id="mShow"><option value="1"${me.profile?.show_phone !== false ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${me.profile?.show_phone === false ? ' selected' : ''}>${esc(T.no)}</option></select>
         </div>
+        <div class="two">
+          <div class="field"><label>${esc(T.apptLength)}</label>
+            <input id="mSlot" type="number" min="10" max="180" step="5" value="${me.profile?.slot_minutes || 30}"></div>
+          <div class="field"><label>${esc(T.shownToCustomers)}</label>
+            <select id="mActive"><option value="1"${me.profile?.active !== false ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${me.profile?.active === false ? '' : ''}>${esc(T.no)}</option></select></div>
+        </div>
+        <div class="field"><label>${esc(T.about)}</label><textarea id="mBio">${esc(me.profile?.bio || '')}</textarea></div>
         <button class="b" id="saveMe">${esc(T.save)}</button>
+      </div>
+    </details>
+
+    <details class="fold">
+      <summary>${esc(T.myHours)}</summary>
+      <div class="inner" id="hoursBox"></div>
+    </details>
+
+    <details class="fold">
+      <summary>${esc(T.daysOff)}</summary>
+      <div class="inner">
+        <div class="stack" id="offList"></div>
+        <div class="two" style="margin-top:12px">
+          <div class="field"><label>${esc(T.date)}</label><input id="offDay" type="date" min="${todayISO()}"></div>
+          <div class="field"><label>${esc(T.reason)}</label><input id="offNote"></div>
+        </div>
+        <button class="b ghost" id="addOff">${esc(T.addDayOff)}</button>
       </div>
     </details>
 
@@ -900,6 +926,8 @@ async function managerView() {
   $('#out').onclick = async () => { await sb.auth.signOut(); staffView(); };
   wireCancels(managerView);
   wireCalendar(managerView);
+  drawWorkHours(myAvail.data || [], me.id, managerView);
+  drawDaysOff(myOff.data || [], managerView);
 
   $('#saveMe').onclick = async () => {
     const f = $('#photo').files[0];
@@ -917,6 +945,9 @@ async function managerView() {
       full_name: $('#mName').value.trim(),
       phone: $('#mPhone').value.trim(),
       show_phone: $('#mShow').value === '1',
+      bio: $('#mBio').value.trim(),
+      slot_minutes: Math.max(10, Math.min(180, parseInt($('#mSlot').value || '30', 10))),
+      active: $('#mActive').value === '1',
       photo_path
     }).eq('id', me.id);
     if (error) return toast(error.message, true);
