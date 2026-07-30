@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260730205304';
+} from './ui.js?v=20260730211016';
 
 const home = $('#home');
 const view = $('#view');
@@ -413,10 +413,18 @@ async function staffView() {
   keepLive();
   if (me.role === 'manager') return managerView();
   if (me.role === 'barber') return barberView();
-  return codeScreen();
+
+  const ticket = readTicket();
+  if (ticket && Date.now() - ticket.at < 15 * 60 * 1000) return nameScreen(ticket);
+  writeTicket(null);
+  return noAccessScreen();
 }
 
-/* the door: who are you here as? */
+/* the door: code first, Google second */
+const TICKET_KEY = 'rico.ticket';
+const readTicket = () => { try { return JSON.parse(localStorage.getItem(TICKET_KEY) || 'null'); } catch (e) { return null; } };
+const writeTicket = (t) => { try { t ? localStorage.setItem(TICKET_KEY, JSON.stringify(t)) : localStorage.removeItem(TICKET_KEY); } catch (e) { /* ignore */ } };
+
 async function doorScreen() {
   const card = await sb.rpc('manager_card').then(r => (r.data && r.data[0]) || null);
   view.innerHTML = `
@@ -434,62 +442,104 @@ async function doorScreen() {
       </div>` : ''}
 
     <div class="stack" style="max-width:460px;margin-top:16px">
-      <button class="b" id="asBarber">${esc(T.doorBarber)}</button>
-      <button class="b ghost" id="asManager">${esc(T.doorManager)}</button>
+      <button class="b" data-door="barber">${esc(T.doorBarber)}</button>
+      <button class="b ghost" data-door="manager">${esc(T.doorManager)}</button>
     </div>
     <p class="dek" style="margin-top:16px;font-size:13px;max-width:460px">${esc(T.staffFoot)}</p>`;
 
-  const go = async (kind) => {
-    try { localStorage.setItem('rico.door', kind); } catch (e) { /* ignore */ }
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'google', options: { redirectTo: SITE + '#/staff' }
-    });
-    if (error) toast(error.message, true);
-  };
-  $('#asBarber').onclick = () => go('barber');
-  $('#asManager').onclick = () => go('manager');
+  $$('[data-door]').forEach(b => b.onclick = () => askCode(b.dataset.door));
 }
 
-/* signed in with Google but not staff yet: ask for the code */
-function codeScreen() {
-  let kind = 'barber';
-  try { kind = localStorage.getItem('rico.door') === 'manager' ? 'manager' : 'barber'; } catch (e) { /* ignore */ }
+/* nothing happens, and no sign-in is offered, until the code checks out */
+function askCode(kind) {
   const label = kind === 'manager' ? T.codeManager : T.codeBarber;
-
   view.innerHTML = `
     <h1 class="page">${esc(label)}</h1>
-    <p class="dek">${esc(T.signedInAs)} ${esc(me.email)}</p>
+    <p class="dek">${esc(T.codeFirst)}</p>
     <div class="panel pad" style="max-width:420px;margin-top:18px">
       <div class="field">
-        <label>${esc(T.yourNameQ)}</label>
-        <input id="myName" autocomplete="name" value="${esc(me.profile?.full_name || '')}">
-      </div>
-      <div class="field">
         <label>${esc(label)}</label>
-        <input id="theCode" inputmode="numeric" maxlength="12" autocomplete="off"
-               style="font-size:26px;text-align:center;letter-spacing:.3em;direction:ltr" placeholder="••••••">
+        <input id="theCode" autocomplete="off" spellcheck="false"
+               style="font-size:22px;text-align:center;letter-spacing:.18em;direction:ltr" placeholder="••••••">
       </div>
-      <button class="b" id="claim">${esc(T.finish)}</button>
+      <button class="b" id="checkIt">${esc(T.continueBtn)}</button>
       <p class="dek" style="margin:14px 0 0;font-size:13px">${esc(T.codeHint)}</p>
       <div class="center2" style="margin-top:10px">
-        <button class="b ghost sm" id="other">${esc(T.switchAccount)}</button>
+        <button class="b ghost sm" id="back">${esc(T.back)}</button>
       </div>
     </div>`;
 
   const submit = async () => {
-    const code = $('#theCode').value.replace(/\D/g, '');
+    const code = $('#theCode').value.trim();
     if (code.length < 4) return toast(T.wrongCode, true);
-    $('#claim').disabled = true;
-    const { error } = await sb.rpc('claim_role',
-      { p_kind: kind, p_code: code, p_name: $('#myName').value.trim() });
-    $('#claim').disabled = false;
+    $('#checkIt').disabled = true;
+    const { data, error } = await sb.rpc('check_code', { p_kind: kind, p_code: code });
+    $('#checkIt').disabled = false;
     if (error) { $('#theCode').value = ''; return toast(error.message, true); }
+    writeTicket({ id: data, kind, at: Date.now() });
+    googleStep(kind);
+  };
+  $('#checkIt').onclick = submit;
+  $('#theCode').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+  $('#back').onclick = doorScreen;
+  $('#theCode').focus();
+}
+
+/* code accepted: now, and only now, offer Google */
+function googleStep(kind) {
+  view.innerHTML = `
+    <h1 class="page">${esc(kind === 'manager' ? T.doorManager : T.doorBarber)}</h1>
+    <p class="dek">${esc(T.codeOk)}</p>
+    <div class="panel pad" style="max-width:420px;margin-top:18px">
+      <button class="b" id="g">${esc(T.google)}</button>
+      <p class="dek" style="margin:14px 0 0;font-size:13px">${esc(T.googleWhy)}</p>
+    </div>`;
+  $('#g').onclick = async () => {
+    $('#g').disabled = true; $('#g').textContent = T.signingIn;
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google', options: { redirectTo: SITE + '#/staff' }
+    });
+    if (error) { $('#g').disabled = false; $('#g').textContent = T.google; toast(error.message, true); }
+  };
+}
+
+/* signed in, ticket in hand: last step is the name */
+function nameScreen(ticket) {
+  view.innerHTML = `
+    <h1 class="page">${esc(T.yourNameQ)}</h1>
+    <p class="dek">${esc(T.signedInAs)} ${esc(me.email)}</p>
+    <div class="panel pad" style="max-width:420px;margin-top:18px">
+      <div class="field">
+        <label>${esc(T.fullName)}</label>
+        <input id="myName" autocomplete="name" value="${esc(me.profile?.full_name || '')}">
+      </div>
+      <button class="b" id="claim">${esc(T.finish)}</button>
+      <div class="center2" style="margin-top:10px">
+        <button class="b ghost sm" id="other">${esc(T.switchAccount)}</button>
+      </div>
+    </div>`;
+  $('#claim').onclick = async () => {
+    $('#claim').disabled = true;
+    const { error } = await sb.rpc('claim_role', { p_ticket: ticket.id, p_name: $('#myName').value.trim() });
+    $('#claim').disabled = false;
+    if (error) { writeTicket(null); toast(error.message, true); return doorScreen(); }
+    writeTicket(null);
     staffView();
   };
-  $('#claim').onclick = submit;
-  $('#theCode').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
   $('#other').onclick = async () => { await sb.auth.signOut(); doorScreen(); };
-  $('#theCode').focus();
+  $('#myName').focus();
+}
+
+/* signed in but holding no ticket: dead end, on purpose */
+function noAccessScreen() {
+  view.innerHTML = `
+    <h1 class="page">${esc(T.staffTitle)}</h1>
+    <p class="dek">${esc(T.notStaff)}</p>
+    <p class="dek" style="margin-top:6px">${esc(me.email)}</p>
+    <div class="brow" style="margin-top:20px;max-width:420px">
+      <button class="b ghost" id="out">${esc(T.signOut)}</button>
+    </div>`;
+  $('#out').onclick = async () => { await sb.auth.signOut(); doorScreen(); };
 }
 
 async function barberView() {

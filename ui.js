@@ -1,7 +1,7 @@
 /* Shared plumbing for every page: one Supabase client, one language switch,
    one set of strings, one set of helpers. */
 
-import { createClient } from './vendor/supabase.js?v=20260730205304';
+import { createClient } from './vendor/supabase.js?v=20260730211016';
 
 export const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';
@@ -52,7 +52,11 @@ const S = {
     todayLabel: 'היום', tomorrowLabel: 'מחר',
 
     doorManager: 'כניסה כמנהל', doorBarber: 'כניסה כספר',
-    doorSub: 'בוחרים דלת, מתחברים עם Google, ומזינים את הקוד.',
+    doorSub: 'בוחרים דלת, מזינים את הקוד, ואז מתחברים עם Google.',
+    codeFirst: 'קודם הקוד. בלי קוד נכון אי אפשר להמשיך.',
+    codeOk: 'הקוד אושר. עכשיו מתחברים עם חשבון Google שלך.',
+    googleWhy: 'חשבון Google הוא מה שיזכור אותך בפעם הבאה — בלי סיסמאות.',
+    continueBtn: 'המשך',
     managerOfShop: 'מנהל המספרה',
     codeManager: 'קוד מנהל', codeBarber: 'קוד ספר',
     codeHint: 'את הקוד מקבלים מהמנהל.', yourNameQ: 'איך קוראים לך?',
@@ -160,7 +164,11 @@ const S = {
     todayLabel: 'Today', tomorrowLabel: 'Tomorrow',
 
     doorManager: 'Enter as manager', doorBarber: 'Enter as barber',
-    doorSub: 'Pick a door, sign in with Google, enter your code.',
+    doorSub: 'Pick a door, enter the code, then sign in with Google.',
+    codeFirst: 'The code comes first. Without it there is nothing to sign in to.',
+    codeOk: 'Code accepted. Now sign in with your Google account.',
+    googleWhy: 'Google is what remembers you next time — no passwords.',
+    continueBtn: 'Continue',
     managerOfShop: 'Shop manager',
     codeManager: 'Manager code', codeBarber: 'Barber code',
     codeHint: 'The manager gives you this code.', yourNameQ: 'What is your name?',
