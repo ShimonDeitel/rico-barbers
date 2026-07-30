@@ -7,8 +7,8 @@
 import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
-  avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL
-} from './ui.js?v=202607301943';
+  avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
+} from './ui.js?v=20260730194628';
 
 const home = $('#home');
 const view = $('#view');
