@@ -383,3 +383,61 @@ grant execute on function public.cancel_appointment(uuid) to authenticated;
 --   insert into public.access_codes(code_hash, role, multi_use, label)
 --   select extensions.crypt(c.code, extensions.gen_salt('bf',10)), 'manager', true, 'MASTER manager code'
 --   from (select public.gen_10_digit() as code) c returning (select code from c);
+
+-- ============================================================================
+-- Added in the second pass: outbound email, audit trail, abuse limits, cron.
+-- Migrations: email_delivery, audit_log_and_booking_limits, manager_mail_settings,
+--             test_email_rpc, mail_result_reconciler.
+-- ============================================================================
+
+create extension if not exists pg_net;   -- async HTTP from inside Postgres
+create extension if not exists pg_cron;  -- in-database scheduler
+
+-- non-secret settings, written only by set_settings() (manager)
+create table public.app_config (
+  key text primary key,
+  value text not null default '',
+  updated_at timestamptz not null default now()
+);
+alter table public.app_config enable row level security;   -- deny-all
+
+-- every outbound email, with the provider's real HTTP result
+create table public.mail_log (
+  id bigserial primary key,
+  to_email text not null,
+  subject text not null,
+  provider text not null default '',
+  request_id bigint,
+  status_code int,
+  error text,
+  created_at timestamptz not null default now()
+);
+alter table public.mail_log enable row level security;
+create policy mail_log_select_mgr on public.mail_log for select to authenticated
+  using (public.is_manager());
+
+-- audit trail of every security-relevant action
+create table public.security_events (
+  id bigserial primary key,
+  at timestamptz not null default now(),
+  user_id uuid,
+  event text not null,
+  detail jsonb not null default '{}'::jsonb
+);
+alter table public.security_events enable row level security;
+create policy sec_select_mgr on public.security_events for select to authenticated
+  using (public.is_manager());
+
+-- The API key lives in Supabase Vault (encrypted), never in a normal column:
+--   perform vault.create_secret(<key>, 'mail_api_key', 'outbound email provider key');
+-- send_email() reads it through vault.decrypted_secrets, posts to Brevo or Resend
+-- with net.http_post, and never raises — a mail failure cannot roll back a booking.
+-- notification_to_email() is an AFTER INSERT trigger on notifications, so anything
+-- that creates a notification (booking, cancellation, test) also sends an email.
+-- reconcile_mail() runs every minute under pg_cron and folds the provider's async
+-- reply back into mail_log.status_code / mail_log.error.
+-- prune_logs() runs nightly and trims logs so a free-tier database never fills up.
+--
+-- book_appointment() additionally enforces: valid phone shape, at most 6 bookings
+-- per customer per hour, at most 3 upcoming appointments, no self-overlap, and
+-- nothing further out than 90 days. See the live functions for the exact bodies.

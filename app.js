@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+import { createClient } from './vendor/supabase.js';
 
 const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';
@@ -57,6 +57,13 @@ async function loadMe() {
   const { data: { session } } = await sb.auth.getSession();
   state.session = session;
   if (!session) { state.role = 'customer'; state.profile = null; return; }
+  // a token can outlive the account it belongs to; drop it rather than render a dead screen
+  const { error: userErr } = await sb.auth.getUser();
+  if (userErr) {
+    await sb.auth.signOut();
+    state.session = null; state.role = 'customer'; state.profile = null;
+    return;
+  }
   const [{ data: r }, { data: p }] = await Promise.all([
     sb.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle(),
     sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
@@ -319,12 +326,16 @@ async function barberPortal() {
 /* ================= MANAGER ================= */
 async function managerPortal() {
   render(`<h1>Manager</h1><p class="sub">Loading…</p>`);
-  const [users, appts, codes] = await Promise.all([
+  const [users, appts, codes, settings, mail, sec] = await Promise.all([
     sb.rpc('list_users'),
     sb.from('appointments').select('*').gte('starts_at', new Date(Date.now() - 7 * 864e5).toISOString()).order('starts_at'),
-    sb.from('access_codes').select('id,role,label,active,multi_use,created_at,used_at').order('created_at', { ascending: false })
+    sb.from('access_codes').select('id,role,label,active,multi_use,created_at,used_at').order('created_at', { ascending: false }),
+    sb.rpc('get_settings'),
+    sb.rpc('recent_mail', { p_limit: 15 }),
+    sb.rpc('recent_security', { p_limit: 15 })
   ]);
   if (users.error) return note(users.error.message, true);
+  const cfg = settings.data || {};
   const byId = Object.fromEntries((users.data || []).map(u => [u.id, u]));
   const booked = (appts.data || []).filter(a => a.status === 'booked');
   const barbers = (users.data || []).filter(u => u.role === 'barber');
@@ -381,8 +392,74 @@ async function managerPortal() {
         </tr>`).join('')}
     </table></div>
     <p class="small muted">Codes are never stored in readable form — only a bcrypt hash. A generated code is shown once; copy it before you leave the page.</p>
+
+    <h2>Email notifications</h2>
+    <div class="card">
+      <p class="small muted" style="margin-top:0">
+        Barbers get an email the moment someone books, and customers get a confirmation.
+        Create a free sender account (Brevo gives 300 emails a day for free), verify the address
+        you want to send from, paste the API key here once, and you are done.
+      </p>
+      <div class="grid2">
+        <div><label>Shop name (shown in the email)</label><input id="cShop" value="${esc(cfg.shop_name || '')}"></div>
+        <div><label>Provider</label>
+          <select id="cProv">
+            <option value=""${!cfg.mail_provider ? ' selected' : ''}>Off — in-app only</option>
+            <option value="brevo"${cfg.mail_provider === 'brevo' ? ' selected' : ''}>Brevo (free, 300/day)</option>
+            <option value="resend"${cfg.mail_provider === 'resend' ? ' selected' : ''}>Resend (free, needs own domain)</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div><label>Send from (verified address)</label><input id="cFrom" type="email" value="${esc(cfg.mail_from_email || '')}"></div>
+        <div><label>Sender name</label><input id="cFromName" value="${esc(cfg.mail_from_name || '')}"></div>
+      </div>
+      <label>API key ${cfg.mail_key_set ? '<span class="pill">stored</span>' : '<span class="pill off">not set</span>'}</label>
+      <input id="cKey" type="password" autocomplete="new-password" placeholder="${cfg.mail_key_set ? 'leave blank to keep the stored key' : 'paste the provider API key'}">
+      <div style="height:16px"></div>
+      <div class="row">
+        <button id="saveCfg">Save email settings</button>
+        <button class="ghost" id="testMail">Send a test email to me</button>
+      </div>
+    </div>
+
+    <h2>Last emails sent</h2>
+    <div class="scroll"><table>
+      <tr><th>When</th><th>To</th><th>Subject</th><th>Result</th></tr>
+      ${(mail.data || []).length === 0 ? `<tr><td colspan="4" class="muted">Nothing sent yet.</td></tr>` : (mail.data || []).map(m => `
+        <tr><td class="small">${fmtDate(m.created_at)} ${fmtTime(m.created_at)}</td>
+        <td class="small">${esc(m.to_email)}</td><td class="small">${esc(m.subject)}</td>
+        <td class="small">${m.error ? `<span class="pill off">${esc(m.error)}</span>`
+          : m.status_code == null ? '<span class="pill off">queued…</span>'
+          : '<span class="pill">delivered</span>'}</td></tr>`).join('')}
+    </table></div>
+
+    <h2>Security log</h2>
+    <div class="scroll"><table>
+      <tr><th>When</th><th>Event</th><th>Detail</th></tr>
+      ${(sec.data || []).length === 0 ? `<tr><td colspan="3" class="muted">Nothing yet.</td></tr>` : (sec.data || []).map(s => `
+        <tr><td class="small">${fmtDate(s.at)} ${fmtTime(s.at)}</td>
+        <td class="small">${esc(s.event)}</td>
+        <td class="small muted">${esc(JSON.stringify(s.detail))}</td></tr>`).join('')}
+    </table></div>
   `);
 
+  $('#saveCfg').onclick = async () => {
+    const { error } = await sb.rpc('set_settings', {
+      p_provider: $('#cProv').value,
+      p_from_email: $('#cFrom').value.trim(),
+      p_from_name: $('#cFromName').value.trim(),
+      p_shop_name: $('#cShop').value.trim(),
+      p_api_key: $('#cKey').value
+    });
+    if (error) return note(error.message, true);
+    await managerPortal(); note('Email settings saved.');
+  };
+  $('#testMail').onclick = async () => {
+    const { error } = await sb.rpc('send_test_email');
+    if (error) return note(error.message, true);
+    setTimeout(async () => { await managerPortal(); note('Test queued — check "Last emails sent" and your inbox.'); }, 1500);
+  };
   $('#mint').onclick = async () => {
     const { data, error } = await sb.rpc('create_barber_code', { p_label: $('#codeLabel').value.trim() });
     if (error) return note(error.message, true);
