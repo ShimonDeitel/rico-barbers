@@ -59,6 +59,10 @@ const S = {
     inviteEmail: 'כתובת Gmail', inviteName: 'שם', invite: 'הוספה לצוות',
     pending: 'טרם התחבר', joined: 'פעיל',
 
+    calendar: 'יומן', month: 'חודש', day: 'יום',
+    prevMonth: 'חודש קודם', nextMonth: 'חודש הבא', todayBtn: 'היום',
+    noneThatDay: 'אין תורים ביום הזה.', freeDay: 'יום חופש',
+    photoChanged: 'התמונה עודכנה.',
     /* barber */
     hi: 'שלום', yourDay: 'היום שלך', upcoming: 'תורים קרובים',
     noAppts: 'אין תורים.', apptsToday: 'תורים היום',
@@ -142,6 +146,10 @@ const S = {
     inviteEmail: 'Gmail address', inviteName: 'Name', invite: 'Add to the team',
     pending: 'not signed in yet', joined: 'active',
 
+    calendar: 'Calendar', month: 'Month', day: 'Day',
+    prevMonth: 'Previous month', nextMonth: 'Next month', todayBtn: 'Today',
+    noneThatDay: 'Nothing booked that day.', freeDay: 'Day off',
+    photoChanged: 'Photo updated.',
     hi: 'Hi', yourDay: 'Your day', upcoming: 'Upcoming',
     noAppts: 'Nothing booked.', apptsToday: 'appointments today',
     call: 'Call', whatsapp: 'WhatsApp',
@@ -215,7 +223,10 @@ export const dayISO = (offset) => {
 };
 
 export function photoUrl(path) {
-  return path ? sb.storage.from('photos').getPublicUrl(path).data.publicUrl : null;
+  if (!path) return null;
+  // the bucket is public and CDN-cached; a changed photo at the same path would
+  // keep serving the old bytes, so every path carries its own version suffix
+  return sb.storage.from('photos').getPublicUrl(path).data.publicUrl;
 }
 export function avatar(name, path, cls = '') {
   const u = photoUrl(path);

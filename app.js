@@ -280,6 +280,76 @@ async function confirmBooking() {
   scrollTo(0, 0);
 }
 
+
+/* ---------------- calendar ----------------
+   A month grid built by hand:each day shows how many appointments sit on it,
+   the picked day drives the list underneath. */
+let calCursor = null;            // first of the month being shown
+let calPicked = null;            // 'YYYY-MM-DD'
+
+const isoOf = (d) => {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+const shopDay = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: TZ });
+
+function calendarHTML(appts, offDays) {
+  const now = shopNow();
+  if (!calCursor) calCursor = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (!calPicked) calPicked = todayISO();
+
+  const y = calCursor.getFullYear(), m = calCursor.getMonth();
+  const first = new Date(y, m, 1);
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const lead = first.getDay();                       // week starts Sunday, as in Israel
+
+  const counts = {};
+  appts.forEach(a => { const k = shopDay(a.starts_at); counts[k] = (counts[k] || 0) + 1; });
+  const off = new Set(offDays || []);
+
+  const title = first.toLocaleDateString(T.locale, { month: 'long', year: 'numeric' });
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push('<span class="cday empty"></span>');
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = isoOf(new Date(y, m, d));
+    const n = counts[iso] || 0;
+    const cls = [
+      'cday',
+      iso === todayISO() ? 'today' : '',
+      iso === calPicked ? 'picked' : '',
+      off.has(iso) ? 'off' : '',
+      n ? 'has' : ''
+    ].filter(Boolean).join(' ');
+    cells.push(`<button class="${cls}" data-cal="${iso}">
+      <span class="n">${d}</span>${n ? `<span class="pips">${'<i></i>'.repeat(Math.min(n, 4))}</span>` : ''}
+    </button>`);
+  }
+
+  return `
+    <div class="cal">
+      <div class="calhead">
+        <button class="b ghost sm" data-cal-move="-1" aria-label="${esc(T.prevMonth)}">‹</button>
+        <b>${esc(title)}</b>
+        <button class="b ghost sm" data-cal-move="1" aria-label="${esc(T.nextMonth)}">›</button>
+        <button class="b ghost sm" data-cal-move="0">${esc(T.todayBtn)}</button>
+      </div>
+      <div class="calgrid">
+        ${T.daysShort.map(d => `<span class="cdow">${esc(d)}</span>`).join('')}
+        ${cells.join('')}
+      </div>
+    </div>`;
+}
+
+function wireCalendar(rerender) {
+  $$('[data-cal-move]').forEach(b => b.onclick = () => {
+    const step = +b.dataset.calMove;
+    if (step === 0) { const n = shopNow(); calCursor = new Date(n.getFullYear(), n.getMonth(), 1); calPicked = todayISO(); }
+    else calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + step, 1);
+    rerender();
+  });
+  $$('[data-cal]').forEach(b => b.onclick = () => { calPicked = b.dataset.cal; rerender(); });
+}
+
 /* ============================ STAFF ============================ */
 
 /* A barber leaves this page open on the counter all day, so it has to keep
@@ -359,21 +429,22 @@ function signInScreen() {
 }
 
 async function barberView() {
-  const start = new Date(todayISO() + 'T00:00:00Z').toISOString();
   const [appts, avail, off] = await Promise.all([
     sb.from('appointments').select('*').eq('barber_id', me.id).eq('status', 'booked')
-      .gte('starts_at', start).order('starts_at'),
+      .gte('starts_at', new Date(Date.now() - 40 * 864e5).toISOString())
+      .lte('starts_at', new Date(Date.now() + 70 * 864e5).toISOString()).order('starts_at'),
     sb.from('availability').select('*').eq('barber_id', me.id).order('weekday'),
     sb.from('time_off').select('*').eq('barber_id', me.id).gte('day', todayISO()).order('day')
   ]);
 
-  const inShop = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const today = todayISO();
   const list = appts.data || [];
-  const todays = list.filter(a => inShop(a.starts_at) === today);
-  const later = list.filter(a => inShop(a.starts_at) !== today);
+  const offDays = (off.data || []).map(o => o.day);
+  if (!calPicked) calPicked = todayISO();
+  const dayList = list.filter(a => shopDay(a.starts_at) === calPicked);
   const p = me.profile || {};
   const addr = pick('address');
+  const pickedLabel = new Date(calPicked + 'T12:00:00').toLocaleDateString(T.locale,
+    { weekday: 'long', day: 'numeric', month: 'long' });
 
   const wa = (ph) => 'https://wa.me/' + ph.replace(/[^0-9]/g, '').replace(/^0/, '972');
 
@@ -382,10 +453,13 @@ async function barberView() {
       <h1 class="page grow" style="margin:0">${esc(T.hi)} ${esc(p.full_name || '')}</h1>
       <button class="b ghost sm" id="out">${esc(T.signOut)}</button>
     </div>
-    <p class="dek">${todays.length} ${esc(T.apptsToday)}</p>
+    <p class="dek">${list.filter(a => shopDay(a.starts_at) === todayISO()).length} ${esc(T.apptsToday)}</p>
 
-    <h2 class="sec">${esc(T.today)} · ${esc(fmtDate(new Date().toISOString()))}</h2>
-    ${todays.length ? todays.map(a => `
+    <h2 class="sec">${esc(T.calendar)}</h2>
+    <div id="calBox">${calendarHTML(list, offDays)}</div>
+
+    <h2 class="sec">${esc(pickedLabel)}</h2>
+    ${dayList.length ? dayList.map(a => `
       <div class="appt">
         <span class="time">${fmtTime(a.starts_at)}</span>
         <span class="grow">
@@ -398,16 +472,7 @@ async function barberView() {
         <a class="b ghost sm" target="_blank" rel="noopener" href="${esc(wa(a.customer_phone))}">${esc(T.whatsapp)}</a>
         <a class="b ghost sm" target="_blank" rel="noopener" href="${esc(googleCalUrl(a, p.full_name, addr))}">${esc(T.addToCal)}</a>
         <button class="b danger sm" data-cancel="${a.id}">${esc(T.cancel)}</button>
-      </div>`).join('') : `<p class="dek">${esc(T.noAppts)}</p>`}
-
-    <h2 class="sec">${esc(T.upcoming)}</h2>
-    ${later.length ? later.map(a => `
-      <div class="appt">
-        <span class="time" style="font-size:15px">${esc(fmtShort(a.starts_at))}<br>${fmtTime(a.starts_at)}</span>
-        <span class="grow"><span class="who2">${esc(a.customer_name)}</span>
-        <span class="meta">${esc(a.customer_phone)}</span></span>
-        <button class="b danger sm" data-cancel="${a.id}">${esc(T.cancel)}</button>
-      </div>`).join('') : `<p class="dek">${esc(T.noAppts)}</p>`}
+      </div>`).join('') : `<p class="dek">${esc(offDays.includes(calPicked) ? T.freeDay : T.noneThatDay)}</p>`}
 
     <details class="fold" style="margin-top:34px">
       <summary>${esc(T.myProfile)}</summary>
@@ -449,6 +514,7 @@ async function barberView() {
 
   $('#out').onclick = async () => { await sb.auth.signOut(); staffView(); };
   wireCancels(barberView);
+  wireCalendar(barberView);
   drawWorkHours(avail.data || [], me.id, barberView);
   drawDaysOff(off.data || [], barberView);
 
@@ -457,9 +523,16 @@ async function barberView() {
     let photo_path = p.photo_path || null;
     if (f) {
       if (f.size > 3 * 1024 * 1024) return toast('3MB', true);
-      photo_path = `${me.id}/avatar.${(f.name.split('.').pop() || 'jpg').toLowerCase()}`;
-      const up = await sb.storage.from('photos').upload(photo_path, f, { upsert: true, contentType: f.type });
+      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+      // a fresh name every time: the bucket is CDN-cached, so overwriting one
+      // path would keep serving the old picture
+      const next = `${me.id}/avatar-${Date.now()}.${ext}`;
+      const up = await sb.storage.from('photos').upload(next, f, { contentType: f.type });
       if (up.error) return toast(up.error.message, true);
+      if (photo_path && photo_path !== next) {
+        await sb.storage.from('photos').remove([photo_path]);   // no orphans left behind
+      }
+      photo_path = next;
     }
     const { error } = await sb.from('profiles').update({
       bio: $('#bio').value.trim(),
@@ -468,7 +541,9 @@ async function barberView() {
       photo_path
     }).eq('id', me.id);
     if (error) return toast(error.message, true);
-    toast(T.saved); staffView();
+    toast(f ? T.photoChanged : T.saved);
+    me.profile = { ...p, photo_path };
+    staffView();
   };
 }
 
@@ -541,10 +616,12 @@ function drawDaysOff(rows, after) {
 async function managerView() {
   const start = new Date(todayISO() + 'T00:00:00Z').toISOString();
   const weekEnd = new Date(Date.now() + 7 * 864e5).toISOString();
+  const monthEnd = new Date(Date.now() + 70 * 864e5).toISOString();
   const [team, appts, cfg, sec] = await Promise.all([
     sb.rpc('list_team'),
     sb.from('appointments').select('*').eq('status', 'booked')
-      .gte('starts_at', start).lte('starts_at', weekEnd).order('starts_at'),
+      .gte('starts_at', new Date(Date.now() - 40 * 864e5).toISOString())
+      .lte('starts_at', monthEnd).order('starts_at'),
     sb.rpc('get_settings'),
     sb.rpc('recent_security', { p_limit: 8 })
   ]);
@@ -552,9 +629,13 @@ async function managerView() {
 
   const rows = team.data || [];
   const byId = Object.fromEntries(rows.filter(r => r.user_id).map(r => [r.user_id, r]));
-  const inShop = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const todays = (appts.data || []).filter(a => inShop(a.starts_at) === todayISO());
+  const all = appts.data || [];
+  if (!calPicked) calPicked = todayISO();
+  const dayList = all.filter(a => shopDay(a.starts_at) === calPicked);
+  const todays = all.filter(a => shopDay(a.starts_at) === todayISO());
   const c = cfg.data || {};
+  const pickedLabel = new Date(calPicked + 'T12:00:00').toLocaleDateString(T.locale,
+    { weekday: 'long', day: 'numeric', month: 'long' });
 
   view.innerHTML = `
     <div class="rowline" style="margin-bottom:6px">
@@ -564,18 +645,21 @@ async function managerView() {
 
     <div class="tiles" style="margin-top:18px">
       <div class="tile"><b>${todays.length}</b><span>${esc(T.statToday)}</span></div>
-      <div class="tile"><b>${(appts.data || []).length}</b><span>${esc(T.statWeek)}</span></div>
+      <div class="tile"><b>${all.filter(a => a.starts_at >= start && a.starts_at <= weekEnd).length}</b><span>${esc(T.statWeek)}</span></div>
       <div class="tile"><b>${rows.filter(r => r.role === 'barber').length}</b><span>${esc(T.statBarbers)}</span></div>
     </div>
 
-    <h2 class="sec">${esc(T.schedule)}</h2>
-    ${todays.length ? todays.map(a => `
+    <h2 class="sec">${esc(T.calendar)}</h2>
+    <div id="calBox">${calendarHTML(all, [])}</div>
+
+    <h2 class="sec">${esc(pickedLabel)}</h2>
+    ${dayList.length ? dayList.map(a => `
       <div class="appt">
         <span class="time">${fmtTime(a.starts_at)}</span>
         <span class="grow"><span class="who2">${esc(a.customer_name)}</span>
         <span class="meta">${esc(byId[a.barber_id]?.full_name || '')} · ${esc(a.customer_phone)}</span></span>
         <button class="b danger sm" data-cancel="${a.id}">${esc(T.cancel)}</button>
-      </div>`).join('') : `<p class="dek">${esc(T.noAppts)}</p>`}
+      </div>`).join('') : `<p class="dek">${esc(T.noneThatDay)}</p>`}
 
     <h2 class="sec">${esc(T.team)}</h2>
     <div class="stack">
@@ -653,6 +737,7 @@ async function managerView() {
 
   $('#out').onclick = async () => { await sb.auth.signOut(); staffView(); };
   wireCancels(managerView);
+  wireCalendar(managerView);
 
   $('#addBarber').onclick = async () => {
     const email = $('#newMail').value.trim();

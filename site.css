@@ -512,3 +512,34 @@ details.fold .inner { padding: 0 18px 18px; }
 .tag.ok { border-color: var(--paper); }
 .hide { display: none !important; }
 .center2 { text-align: center; }
+
+
+/* ============ calendar ============ */
+.cal { border: 1px solid var(--hair); border-radius: 18px; padding: 14px; }
+.calhead {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+}
+.calhead b { flex: 1; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.calgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cdow {
+  text-align: center; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dim); padding-bottom: 6px;
+}
+.cday {
+  position: relative; aspect-ratio: 1 / 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border: 1px solid transparent; border-radius: 12px;
+  background: none; color: var(--paper); font: inherit; font-size: 14px; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background .18s, border-color .18s, color .18s;
+}
+.cday.empty { pointer-events: none; }
+.cday:hover { border-color: var(--hair); }
+.cday.has { background: rgba(255,255,255,.07); }
+.cday.today { border-color: var(--hair); font-weight: 700; }
+.cday.today .n { text-decoration: underline; text-underline-offset: 3px; }
+.cday.off { color: #4d4d4d; }
+.cday.picked { background: var(--paper); color: var(--ink); border-color: var(--paper); font-weight: 700; }
+.cday .pips { display: flex; gap: 2px; }
+.cday .pips i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .7; }
+@media (max-width: 520px) { .cday { font-size: 13px; border-radius: 10px; } }
