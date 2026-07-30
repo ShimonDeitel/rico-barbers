@@ -15,26 +15,37 @@ baked in, so it renders instantly and stays complete even if the network is slow
 The "open now / closed now" badge is computed live from the opening hours in the shop's timezone,
 and rechecks every minute.
 
-## Three doors, one site
+## One link
 
-- `index.html` — the shop's front page. Photos, price list, live opening hours, location.
-- `book.html` — customers book here. **No account, no password, no email.** Name and phone,
-  that's it. The booking is remembered in the browser by its own id, so a customer can see and
-  cancel their appointment without ever signing in.
-- `staff.html` — one box asking for a code. The master code opens the manager view; a barber's
-  code opens that barber's day. There is no sign-up anywhere in the product.
+There is a single URL. Everything lives behind it:
+
+- `#/` the shop — photos, price list, live opening hours, location
+- `#/book` customers book: **no account, no password, no email.** Name and phone. The booking is
+  remembered in the browser by its own id, so they can see or cancel it without ever signing in.
+- `#/staff` the team, signed in with Google
 
 ## How access works
 
-There are no usernames and no passwords. A code **is** the account.
+**Sign in with Google. Nothing else.** There is no sign-up form and no password anywhere.
 
-- The manager mints a barber by name and picks how many digits the code should have (4 to 10).
-  The code is shown once and never again — it is stored only as a bcrypt hash.
-- Signing in hashes the typed code into a hidden account address and authenticates with it, so
-  every row-level policy in the database still applies exactly as before.
-- `New code` rotates a barber's code (the old one dies instantly). `Remove` deletes them.
-- Only a manager can create staff, see the team, edit the website or read the logs. A barber who
-  tries any of it is refused by the database, not by the interface.
+- A `staff_allowlist` table maps Google addresses to a role. The manager adds a barber by typing
+  their Gmail address; the next time that person signs in with Google they land on their own day.
+- Anyone else who signs in is told the account is not on the team and can do nothing.
+- Removing someone deletes the allowlist row and the account with it.
+- Only a manager can add or remove staff, edit the website or read the logs. A barber who tries
+  is refused by the database, not by the interface.
+
+### Turning Google on (once)
+
+The provider has to be enabled with credentials from the shop's own Google account:
+
+1. Google Cloud Console → APIs & Services → Credentials → **Create OAuth client ID** → Web application.
+   Authorised redirect URI: `https://vbhjrcakyhpexmntjgxd.supabase.co/auth/v1/callback`
+2. Supabase → Authentication → Sign In / Providers → **Google**: on, paste the client ID and secret.
+3. Supabase → Authentication → URL Configuration → Site URL and Redirect URLs:
+   `https://shimondeitel.github.io/rico-barbers/`
+
+Until that is done the booking side works fully; only the staff door is closed.
 
 ## Languages
 

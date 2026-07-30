@@ -9,7 +9,13 @@ export const TZ = 'Asia/Jerusalem';
 const LANG_KEY = 'bs.lang';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    // PKCE returns ?code= in the query string, so it never collides with our #/ routes
+    flowType: 'pkce',
+    detectSessionInUrl: true
+  }
 });
 
 /* ---------------- strings ---------------- */
@@ -19,6 +25,18 @@ const S = {
     back: 'חזרה', loading: 'טוען…', save: 'שמירה', saved: 'נשמר', cancel: 'ביטול',
     remove: 'הסרה', add: 'הוספה', close: 'סגירה', yes: 'כן', no: 'לא', none: 'אין',
     signOut: 'יציאה', today: 'היום', week: 'השבוע', settings: 'הגדרות',
+
+    /* front page */
+    navServices: 'מחירון', navHours: 'שעות', navVisit: 'איפה',
+    book: 'הזמן תור', bookNow: 'הזמנת תור', whatsapp: 'וואטסאפ',
+    yearsLabel: 'שנות ניסיון', aboutKicker: 'על המספרה', galleryKicker: 'מהמספרה',
+    servicesKicker: 'מחירון', hoursKicker: 'שעות פתיחה', visitKicker: 'איפה אנחנו',
+    maps: 'ניווט', call: 'התקשרו', instagram: 'אינסטגרם',
+    closer: 'כיסא אחד.<br>תור אחד.', staff: 'כניסת צוות',
+    pricesNote: 'המחירים מתעדכנים מעת לעת. התשלום במספרה.',
+    open: 'פתוח עכשיו', closed: 'סגור עכשיו', closedToday: 'סגור',
+    min: 'דק׳', currency: '₪',
+    marquee: ['ירושלים', 'יפו 216', 'פייד', 'זקן', 'סטייל', 'ללא המתנה'],
 
     /* booking */
     bookTitle: 'קביעת תור', bookSub: 'בוחרים ספר, בוחרים שעה. בלי הרשמה, בלי סיסמה.',
@@ -34,9 +52,12 @@ const S = {
     todayLabel: 'היום', tomorrowLabel: 'מחר',
 
     /* staff gate */
-    staffTitle: 'כניסת צוות', staffSub: 'הזינו את הקוד שקיבלתם.',
-    code: 'קוד', enter: 'כניסה',
-    badCode: 'הקוד לא נכון.', staffFoot: 'הקוד נשמר מוצפן. אין כאן שמות משתמש וסיסמאות.',
+    staffTitle: 'כניסת צוות', staffSub: 'התחברו עם חשבון Google שלכם.',
+    google: 'התחברות עם Google', signingIn: 'מתחבר…',
+    notStaff: 'החשבון הזה לא מורשה. פנו למנהל.',
+    staffFoot: 'רק כתובות שהמנהל הוסיף יכולות להיכנס. אין סיסמאות.',
+    inviteEmail: 'כתובת Gmail', inviteName: 'שם', invite: 'הוספה לצוות',
+    pending: 'טרם התחבר', joined: 'פעיל',
 
     /* barber */
     hi: 'שלום', yourDay: 'היום שלך', upcoming: 'תורים קרובים',
@@ -54,10 +75,7 @@ const S = {
     statToday: 'תורים היום', statWeek: 'תורים השבוע', statBarbers: 'ספרים',
     schedule: 'לוח היום', allBarbers: 'כל הספרים',
     team: 'הצוות', addBarber: 'הוספת ספר', barberName: 'שם הספר',
-    codeLength: 'אורך הקוד', digits: 'ספרות',
-    newStaffCode: 'הקוד של', copy: 'העתקה', copied: 'הועתק',
-    codeOnce: 'הקוד מוצג פעם אחת בלבד. שלחו אותו לספר עכשיו.',
-    resetCode: 'קוד חדש', removeBarber: 'הסרת ספר',
+    removeBarber: 'הסרה',
     confirmRemove: 'להסיר את הספר הזה?',
     website: 'האתר', emails: 'התראות', security: 'אבטחה',
     gallery: 'גלריה', addPhotos: 'הוספת תמונות', photosHint: 'תמונות מהמספרה. גררו כדי להחליף סדר לא נתמך — הסירו והוסיפו.',
@@ -88,7 +106,7 @@ const S = {
       'not found': 'לא נמצא.',
       'name required': 'צריך שם.',
       'you cannot remove yourself': 'אי אפשר להסיר את עצמך.',
-      'Invalid login credentials': 'הקוד לא נכון.'
+      'invalid email': 'כתובת אימייל לא תקינה.'
     }
   },
 
@@ -97,6 +115,18 @@ const S = {
     back: 'Back', loading: 'Loading…', save: 'Save', saved: 'Saved', cancel: 'Cancel',
     remove: 'Remove', add: 'Add', close: 'Close', yes: 'Yes', no: 'No', none: 'None',
     signOut: 'Sign out', today: 'Today', week: 'This week', settings: 'Settings',
+
+    /* front page */
+    navServices: 'Prices', navHours: 'Hours', navVisit: 'Find us',
+    book: 'Book', bookNow: 'Book a chair', whatsapp: 'WhatsApp',
+    yearsLabel: 'years on the chair', aboutKicker: 'The shop', galleryKicker: 'Inside the shop',
+    servicesKicker: 'Price list', hoursKicker: 'Opening hours', visitKicker: 'Where we are',
+    maps: 'Directions', call: 'Call us', instagram: 'Instagram',
+    closer: 'One chair.<br>One appointment.', staff: 'Staff login',
+    pricesNote: 'Prices change from time to time. Payment at the shop.',
+    open: 'Open now', closed: 'Closed now', closedToday: 'Closed',
+    min: 'min', currency: '₪',
+    marquee: ['Jerusalem', '216 Jaffa St', 'Fades', 'Beards', 'Style', 'No waiting'],
 
     bookTitle: 'Book an appointment', bookSub: 'Pick a barber, pick a time. No signup, no password.',
     step: 'Step', chooseBarber: 'Choose a barber', chooseDay: 'Choose a day', chooseTime: 'Choose a time',
@@ -110,9 +140,12 @@ const S = {
     needNamePhone: 'Name and phone are required.', another: 'Book another',
     todayLabel: 'Today', tomorrowLabel: 'Tomorrow',
 
-    staffTitle: 'Staff entrance', staffSub: 'Enter the code you were given.',
-    code: 'Code', enter: 'Enter',
-    badCode: 'That code is not right.', staffFoot: 'Codes are stored hashed. No usernames, no passwords.',
+    staffTitle: 'Staff entrance', staffSub: 'Sign in with your Google account.',
+    google: 'Sign in with Google', signingIn: 'Signing in…',
+    notStaff: 'This account is not on the team. Ask the manager to add it.',
+    staffFoot: 'Only addresses the manager added can get in. There are no passwords.',
+    inviteEmail: 'Gmail address', inviteName: 'Name', invite: 'Add to the team',
+    pending: 'not signed in yet', joined: 'active',
 
     hi: 'Hi', yourDay: 'Your day', upcoming: 'Upcoming',
     noAppts: 'Nothing booked.', apptsToday: 'appointments today',
@@ -128,10 +161,7 @@ const S = {
     statToday: 'today', statWeek: 'this week', statBarbers: 'barbers',
     schedule: "Today's schedule", allBarbers: 'All barbers',
     team: 'The team', addBarber: 'Add a barber', barberName: 'Barber name',
-    codeLength: 'Code length', digits: 'digits',
-    newStaffCode: 'Code for', copy: 'Copy', copied: 'Copied',
-    codeOnce: 'This code is shown once. Send it to the barber now.',
-    resetCode: 'New code', removeBarber: 'Remove',
+    removeBarber: 'Remove',
     confirmRemove: 'Remove this barber?',
     website: 'Website', emails: 'Notifications', security: 'Security',
     gallery: 'Gallery', addPhotos: 'Add photos', photosHint: 'Photos of the shop. To reorder, remove and add again.',

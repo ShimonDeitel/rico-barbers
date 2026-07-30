@@ -450,3 +450,13 @@ create policy sec_select_mgr on public.security_events for select to authenticat
 -- ---------------------------------------------------------------------------
 alter table public.profiles
   add column if not exists lang text not null default 'he' check (lang in ('he','en'));
+
+-- ---------------------------------------------------------------------------
+-- Migration google_signin_allowlist / drop_code_machinery:
+-- staff sign in with Google only. public.staff_allowlist(email, role) decides who
+-- is staff; handle_new_user() reads it on first sign-in and sync_my_role() re-reads
+-- it for someone allowlisted after they had already signed in once.
+-- add_staff / remove_staff / list_team are manager-only. All the code-login
+-- machinery (access_codes, code_attempts, redeem_access_code, create_staff, ...)
+-- and the password-signup autoconfirm trigger were dropped.
+-- ---------------------------------------------------------------------------
