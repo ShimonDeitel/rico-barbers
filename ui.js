@@ -1,7 +1,7 @@
 /* Shared plumbing for every page: one Supabase client, one language switch,
    one set of strings, one set of helpers. */
 
-import { createClient } from './vendor/supabase.js?v=20260731015631';
+import { createClient } from './vendor/supabase.js?v=20260731015809';
 
 export const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';
@@ -136,8 +136,10 @@ const S = {
       'invalid email': 'כתובת אימייל לא תקינה.',
       'wrong code': 'הקוד לא נכון.',
       'too many attempts, try again later': 'יותר מדי נסיונות, נסו שוב בעוד שעה.',
-      'code must be 4 to 12 digits': 'הקוד חייב להיות 4 עד 12 ספרות.',
-      'you cannot remove yourself': 'אי אפשר להסיר את עצמך.'
+      'code must be 6 to 32 letters or digits': 'הקוד חייב להיות 6 עד 32 אותיות או ספרות.',
+      'current manager code is wrong': 'קוד המנהל הנוכחי לא נכון.',
+      'staff only': 'רק מי שבצוות יכול לעשות את זה.',
+      'not a member of the team': 'לא נמצא בצוות.'
     }
   },
 
