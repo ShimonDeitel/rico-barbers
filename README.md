@@ -2,9 +2,6 @@
 
 The shop's website and its booking system. Jerusalem, Sha'arei Ha'ir, 216 Jaffa St.
 
-- `index.html` — the public front page: hero, price list, live opening hours, location.
-- `app.html` — the booking system behind it. Three doors: **Barber**, **Manager**, **Customer**.
-
 Works on phone, tablet and desktop. Black and white, Hebrew first.
 Static front end (GitHub Pages) + Supabase for auth, database, storage.
 
@@ -18,28 +15,36 @@ baked in, so it renders instantly and stays complete even if the network is slow
 The "open now / closed now" badge is computed live from the opening hours in the shop's timezone,
 and rechecks every minute.
 
+## Three doors, one site
+
+- `index.html` — the shop's front page. Photos, price list, live opening hours, location.
+- `book.html` — customers book here. **No account, no password, no email.** Name and phone,
+  that's it. The booking is remembered in the browser by its own id, so a customer can see and
+  cancel their appointment without ever signing in.
+- `staff.html` — one box asking for a code. The master code opens the manager view; a barber's
+  code opens that barber's day. There is no sign-up anywhere in the product.
+
+## How access works
+
+There are no usernames and no passwords. A code **is** the account.
+
+- The manager mints a barber by name and picks how many digits the code should have (4 to 10).
+  The code is shown once and never again — it is stored only as a bcrypt hash.
+- Signing in hashes the typed code into a hidden account address and authenticates with it, so
+  every row-level policy in the database still applies exactly as before.
+- `New code` rotates a barber's code (the old one dies instantly). `Remove` deletes them.
+- Only a manager can create staff, see the team, edit the website or read the logs. A barber who
+  tries any of it is refused by the database, not by the interface.
+
 ## Languages
 
-The whole app is bilingual — Hebrew (RTL) and English (LTR) — with a toggle in the header on
-every screen. It opens in Hebrew by default. The choice is remembered in the browser and saved
-on the account, so notifications and emails go out in each person's own language: a Hebrew-speaking
-barber gets the booking alert in Hebrew while the same booking sends the customer an English
-confirmation. All strings live in `i18n.js`; adding a third language means adding one object there.
+The whole thing is bilingual — Hebrew (RTL, default) and English — with a toggle on every page.
 
-## How it works
+## Calendar
 
-1. **Everyone signs in** with their own email + password. A new account is always a plain customer.
-2. **Barber** — enter a 10-digit barber code (issued by the manager) once, and the account becomes a barber.
-   From then on the barber logs in normally and lands on their dashboard: upcoming appointments,
-   notifications, profile (name, phone, bio, photo, appointment length), weekly working hours, days off.
-3. **Manager** — enter the 10-digit master code once. The manager sees every account, every appointment,
-   can change anyone's role, hide or show a barber, cancel any appointment, and generate barber codes.
-4. **Customer** (Hebrew) — sees the barbers with their photos and bios, picks a barber, picks a date,
-   picks a free time, confirms with name and phone. The barber immediately gets a notification.
-   Customers can cancel their own appointments.
-
-Free slots are computed on the server from the barber's weekly hours, minus days off, minus
-appointments already taken, minus anything in the past. Shop timezone: `Asia/Jerusalem`.
+Every appointment has an **Add to calendar** button for both the barber and the customer. It opens
+Google Calendar prefilled, and the same link works with Apple Calendar and Outlook. No accounts to
+connect, no OAuth, nothing to pay for.
 
 ## Where the backend actually lives
 
@@ -72,12 +77,10 @@ Every attempt is logged with the provider's real HTTP status, so a bounce is vis
 
 ## Security model
 
-- Passwords are handled by Supabase Auth (bcrypt, never in the app).
-- The 10-digit codes are stored **only as bcrypt hashes**. There is no way to read a code back.
-- Codes are verified inside the database (`redeem_access_code`), never in the browser.
-  5 failed attempts per user per hour locks further attempts.
-- Roles live in `user_roles`, a table with **no client write policies**. A user cannot grant
-  themselves a role; only the code-redemption function and a manager can change roles.
+- Codes are stored **only as bcrypt hashes**. There is no way to read a code back out.
+- Nobody can create an account. The only way in is a code a manager issued.
+- Roles live in `user_roles`, a table with **no client write policies**. Nobody can grant
+  themselves a role; only a manager, through a checked function, can.
 - Row Level Security on every table: a customer can read only their own appointments,
   a barber only their own, a manager everything.
 - Appointments can only be created through `book_appointment`, which re-validates the slot
@@ -85,9 +88,10 @@ Every attempt is logged with the provider's real HTTP status, so a bounce is vis
 - Customers never see other customers' rows. The barber directory is a column-limited view
   (name, bio, photo, slot length) — phone numbers and emails are not in it.
 - Photo uploads are restricted to each user's own folder, 3 MB, image types only.
-- Booking is throttled server-side: at most 6 bookings an hour per customer, at most 3 upcoming
-  appointments, no two overlapping appointments for the same person, nothing more than 90 days out,
-  and the phone number must match a strict pattern.
+- Booking is throttled server-side by phone number: at most 6 an hour, at most 3 upcoming, no two
+  overlapping, nothing more than 90 days out, and the number must match a strict pattern.
+- A booking id is an unguessable uuid and is the only thing that proves ownership of a booking,
+  so a customer needs no account to manage one and cannot see anyone else's.
 - Every security-relevant action (code redeemed, code rejected, lockout, role change, key change)
   is written to an append-only audit log the manager can read and nobody else can.
 - The email API key is held in Supabase Vault, encrypted at rest, readable only by a
@@ -100,11 +104,11 @@ Every attempt is logged with the provider's real HTTP status, so a bounce is vis
 
 ## Layout
 
-- `index.html` / `site.css` / `site.js` — the public front page
-- `app.html` — booking-system shell, plus the Content Security Policy
-- `app.js` — all app screens and logic (vanilla ES modules, no build step)
-- `i18n.js` — every user-facing string, Hebrew and English
-- `styles.css` — black and white, responsive
+- `index.html` / `site.js` — the public front page
+- `book.html` / `book.js` — accountless customer booking
+- `staff.html` / `staff.js` — the code gate and both dashboards
+- `ui.js` — one Supabase client, the language switch, every string, shared helpers
+- `site.css` — the whole design system: front page and app layer
 - `vendor/` — pinned copy of the Supabase client, so the app loads no third-party script
 - `schema.sql` — full database schema, policies and functions, for reference
 
@@ -113,5 +117,7 @@ Every attempt is logged with the provider's real HTTP status, so a bounce is vis
 - Email confirmation is bypassed on signup (a database trigger marks new emails confirmed),
   because the project has no outbound SMTP. To require real email verification, remove the
   `autoconfirm_email_trg` trigger and configure an SMTP provider in Supabase.
-- Barbers get both in-app notifications and email. Phone push notifications would need a
-  native app or an installed PWA with VAPID keys; email covers the same need for free today.
+- Staff sign in with a code, so their account address is a hash and cannot receive mail. Each
+  barber sets a real inbox in their own profile if they want booking alerts by email.
+- Phone push would need a native app or an installed PWA with VAPID keys; email plus the
+  dashboard covers the same need for free today.

@@ -21,6 +21,7 @@ const UI = {
     open: 'פתוח עכשיו', closed: 'סגור עכשיו', closedToday: 'סגור',
     min: 'דק׳', currency: '₪',
     days: ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'],
+    galleryKicker: 'מהמספרה',
     marquee: ['ירושלים', 'יפו 216', 'פייד', 'זקן', 'סטייל', 'ללא המתנה']
   },
   en: {
@@ -36,6 +37,7 @@ const UI = {
     open: 'Open now', closed: 'Closed now', closedToday: 'Closed',
     min: 'min', currency: '₪',
     days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    galleryKicker: 'Inside the shop',
     marquee: ['Jerusalem', '216 Jaffa St', 'Fades', 'Beards', 'Style', 'No waiting']
   }
 };
@@ -57,6 +59,7 @@ const FALLBACK = {
   policy_he: 'לא ניתן לבטל תור פחות מ-4 שעות מראש. לקוח שלא יגיע בזמן לא ייכנס לתספורת ויחויב ב-50% מהתשלום.',
   policy_en: 'Appointments cannot be cancelled less than 4 hours in advance. Arriving late means losing the slot and a 50% charge.',
   // shipped so the first paint is the same height as the loaded one — no layout jump
+  gallery_json: '[]',
   hours_json: JSON.stringify([
     { d: 0, o: '10:00', c: '20:00' }, { d: 1, o: '10:00', c: '20:00' },
     { d: 2, o: '10:00', c: '20:00' }, { d: 3, o: '10:00', c: '20:00' },
@@ -167,6 +170,13 @@ function paint() {
       <span class="smin">${esc(s.min || '')} ${esc(T.min)}</span>
       <span class="sprice">${esc(T.currency)}${esc(s.price || '')}</span>
     </div>`).join('');
+
+  // gallery
+  const shots = json('gallery_json', []);
+  const gal = document.getElementById('gallery');
+  gal.innerHTML = shots.map((p, i) => `<figure class="reveal"><img loading="lazy" alt=""
+      src="${SUPABASE_URL}/storage/v1/object/public/photos/${encodeURI(p)}"></figure>`).join('');
+  document.getElementById('shots').style.display = shots.length ? '' : 'none';
 
   // hours
   const byDay = hoursList();
