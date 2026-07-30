@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260731005135';
+} from './ui.js?v=20260731012732';
 
 const home = $('#home');
 const view = $('#view');
@@ -460,6 +460,7 @@ function askCode(kind) {
       <div class="field">
         <label>${esc(label)}</label>
         <input id="theCode" autocomplete="off" spellcheck="false"
+               autocapitalize="characters" autocorrect="off"
                style="font-size:22px;text-align:center;letter-spacing:.18em;direction:ltr" placeholder="••••••">
       </div>
       <button class="b" id="checkIt">${esc(T.continueBtn)}</button>
@@ -475,13 +476,22 @@ function askCode(kind) {
     $('#checkIt').disabled = true;
     const { data, error } = await sb.rpc('check_code', { p_kind: kind, p_code: code });
     $('#checkIt').disabled = false;
-    $('#theCode').value = '';
     if (error) return toast(error.message, true);
-    if (!data) return toast(T.wrongCode, true);      // wrong, or locked out for guessing
+    if (!data) {                                     // wrong, or locked out for guessing
+      $('#theCode').select();                        // leave it there so a typo can be fixed
+      return toast(T.wrongCode, true);
+    }
+    $('#theCode').value = '';
     writeTicket({ id: data, kind, at: Date.now() });
     googleStep(kind);
   };
   $('#checkIt').onclick = submit;
+  /* a phone keyboard likes to send lowercase; show the owner what is really going out */
+  $('#theCode').oninput = (e) => {
+    const at = e.target.selectionStart;
+    e.target.value = e.target.value.toUpperCase();
+    e.target.setSelectionRange(at, at);
+  };
   $('#theCode').onkeydown = (e) => { if (e.key === 'Enter') submit(); };
   $('#back').onclick = doorScreen;
   $('#theCode').focus();
