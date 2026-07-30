@@ -1,9 +1,22 @@
-# The Barbershop
+# RICO BARBERS
 
-A single-page booking web app for a barbershop. Three doors: **Barber**, **Manager**, **Customer**.
-Works on phone, tablet and desktop. Black and white. The customer side is entirely in Hebrew (RTL).
+The shop's website and its booking system. Jerusalem, Sha'arei Ha'ir, 216 Jaffa St.
 
+- `index.html` — the public front page: hero, price list, live opening hours, location.
+- `app.html` — the booking system behind it. Three doors: **Barber**, **Manager**, **Customer**.
+
+Works on phone, tablet and desktop. Black and white, Hebrew first.
 Static front end (GitHub Pages) + Supabase for auth, database, storage.
+
+## The front page
+
+Content is not hardcoded. Everything on it — tagline, about, address, phone, WhatsApp, Instagram,
+years, cancellation policy, the whole price list and the opening hours — lives in the shop's own
+settings and is edited from **Manager → Website content**. The page ships with the same values
+baked in, so it renders instantly and stays complete even if the network is slow or unavailable.
+
+The "open now / closed now" badge is computed live from the opening hours in the shop's timezone,
+and rechecks every minute.
 
 ## Languages
 
@@ -87,8 +100,9 @@ Every attempt is logged with the provider's real HTTP status, so a bounce is vis
 
 ## Layout
 
-- `index.html` — shell, plus the Content Security Policy
-- `app.js` — all screens and logic (vanilla ES modules, no build step)
+- `index.html` / `site.css` / `site.js` — the public front page
+- `app.html` — booking-system shell, plus the Content Security Policy
+- `app.js` — all app screens and logic (vanilla ES modules, no build step)
 - `i18n.js` — every user-facing string, Hebrew and English
 - `styles.css` — black and white, responsive
 - `vendor/` — pinned copy of the Supabase client, so the app loads no third-party script

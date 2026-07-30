@@ -441,6 +441,44 @@ async function managerPortal() {
     </table></div>
     <p class="small muted">${esc(T.codesFoot)}</p>
 
+    <h2>${esc(T.siteSection)}</h2>
+    <div class="card">
+      <p class="small muted" style="margin-top:0">${esc(T.siteIntro)} <a href="./" class="small">${esc(T.viewSite)}</a></p>
+      <div class="grid2">
+        <div><label>${esc(T.taglineHe)}</label><input id="k_tagline_he" value="${esc(cfg.tagline_he || '')}"></div>
+        <div><label>${esc(T.taglineEn)}</label><input id="k_tagline_en" value="${esc(cfg.tagline_en || '')}"></div>
+      </div>
+      <label>${esc(T.aboutHe)}</label><textarea id="k_about_he">${esc(cfg.about_he || '')}</textarea>
+      <label>${esc(T.aboutEn)}</label><textarea id="k_about_en">${esc(cfg.about_en || '')}</textarea>
+      <div class="grid2">
+        <div><label>${esc(T.addressHe)}</label><input id="k_address_he" value="${esc(cfg.address_he || '')}"></div>
+        <div><label>${esc(T.addressEn)}</label><input id="k_address_en" value="${esc(cfg.address_en || '')}"></div>
+      </div>
+      <div class="grid2">
+        <div><label>${esc(T.phoneField)}</label><input id="k_phone" value="${esc(cfg.phone || '')}"></div>
+        <div><label>${esc(T.whatsappField)}</label><input id="k_whatsapp" value="${esc(cfg.whatsapp || '')}"></div>
+      </div>
+      <div class="grid2">
+        <div><label>${esc(T.instagramField)}</label><input id="k_instagram" value="${esc(cfg.instagram || '')}"></div>
+        <div><label>${esc(T.mapsField)}</label><input id="k_maps_url" value="${esc(cfg.maps_url || '')}"></div>
+      </div>
+      <div class="grid2">
+        <div><label>${esc(T.yearsField)}</label><input id="k_years" type="number" min="0" max="99" value="${esc(cfg.years || '')}"></div>
+      </div>
+      <label>${esc(T.policyHe)}</label><textarea id="k_policy_he">${esc(cfg.policy_he || '')}</textarea>
+      <label>${esc(T.policyEn)}</label><textarea id="k_policy_en">${esc(cfg.policy_en || '')}</textarea>
+
+      <h3 style="margin-top:22px">${esc(T.priceList)}</h3>
+      <div id="svcRows"></div>
+      <button class="ghost tiny" id="addSvc">${esc(T.addService)}</button>
+
+      <h3 style="margin-top:22px">${esc(T.openHours)}</h3>
+      <div id="hourRows"></div>
+
+      <div style="height:16px"></div>
+      <button id="saveSite">${esc(T.saveSite)}</button>
+    </div>
+
     <h2>${esc(T.emailSection)}</h2>
     <div class="card">
       <p class="small muted" style="margin-top:0">${esc(T.emailIntro)}</p>
@@ -487,6 +525,70 @@ async function managerPortal() {
         <td class="small muted">${esc(JSON.stringify(s.detail))}</td></tr>`).join('')}
     </table></div>
   `);
+
+  /* ---- website content editor ---- */
+  const parseList = (raw, fb) => { try { const v = JSON.parse(raw || '[]'); return Array.isArray(v) ? v : fb; } catch (e) { return fb; } };
+  let services = parseList(cfg.services_json, []);
+  let hours = parseList(cfg.hours_json, []);
+
+  function drawServices() {
+    $('#svcRows').innerHTML = services.map((s, i) => `
+      <div class="card tight" data-svc="${i}">
+        <div class="grid2">
+          <div><label>${esc(T.svcHe)}</label><input data-f="he" value="${esc(s.he || '')}"></div>
+          <div><label>${esc(T.svcEn)}</label><input data-f="en" value="${esc(s.en || '')}"></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div><label>${esc(T.svcPrice)}</label><input data-f="price" inputmode="numeric" value="${esc(s.price || '')}"></div>
+          <div><label>${esc(T.svcMin)}</label><input data-f="min" inputmode="numeric" value="${esc(s.min || '')}"></div>
+          <div style="display:flex;align-items:end"><button class="tiny ghost" data-delsvc="${i}">${esc(T.remove)}</button></div>
+        </div>
+      </div>`).join('');
+    $$('[data-delsvc]').forEach(b => b.onclick = () => { collectServices(); services.splice(+b.dataset.delsvc, 1); drawServices(); });
+  }
+  function collectServices() {
+    services = $$('[data-svc]').map(row => ({
+      he: $('[data-f=he]', row).value.trim(),
+      en: $('[data-f=en]', row).value.trim(),
+      price: $('[data-f=price]', row).value.trim(),
+      min: $('[data-f=min]', row).value.trim()
+    })).filter(s => s.he || s.en);
+  }
+  function drawHours() {
+    const byDay = {};
+    hours.forEach(h => { if (h && typeof h.d === 'number') byDay[h.d] = h; });
+    $('#hourRows').innerHTML = T.days.map((d, i) => {
+      const h = byDay[i] || { o: '', c: '' };
+      return `<div class="card tight" data-hr="${i}">
+        <div class="row">
+          <div><label>${esc(d)}</label>
+            <select data-f="on"><option value="1"${h.o && h.c ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${h.o && h.c ? '' : ' selected'}>${esc(T.closedDay)}</option></select>
+          </div>
+          <div><label>${esc(T.openAt)}</label><input data-f="o" type="time" value="${esc(h.o || '')}"></div>
+          <div><label>${esc(T.closeAt)}</label><input data-f="c" type="time" value="${esc(h.c || '')}"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  function collectHours() {
+    hours = $$('[data-hr]').map(row => {
+      const on = $('[data-f=on]', row).value === '1';
+      return { d: +row.dataset.hr, o: on ? $('[data-f=o]', row).value : '', c: on ? $('[data-f=c]', row).value : '' };
+    });
+  }
+  drawServices(); drawHours();
+  $('#addSvc').onclick = () => { collectServices(); services.push({ he: '', en: '', price: '', min: '30' }); drawServices(); };
+
+  $('#saveSite').onclick = async () => {
+    collectServices(); collectHours();
+    const body = { services_json: JSON.stringify(services), hours_json: JSON.stringify(hours) };
+    ['tagline_he', 'tagline_en', 'about_he', 'about_en', 'address_he', 'address_en',
+     'phone', 'whatsapp', 'instagram', 'maps_url', 'years', 'policy_he', 'policy_en']
+      .forEach(k => { body[k] = $(`#k_${k}`).value.trim(); });
+    const { error } = await sb.rpc('set_content', { p_content: body });
+    if (error) return note(error.message, true);
+    await managerPortal(); note(T.siteSaved);
+  };
 
   $('#saveCfg').onclick = async () => {
     const { error } = await sb.rpc('set_settings', {

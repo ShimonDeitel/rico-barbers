@@ -1,29 +1,112 @@
 <!doctype html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#000000">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://vbhjrcakyhpexmntjgxd.supabase.co; connect-src https://vbhjrcakyhpexmntjgxd.supabase.co; base-uri 'none'; form-action 'none'">
-<title>The Barbershop</title>
-<link rel="stylesheet" href="styles.css">
+<title>RICO BARBERS — ירושלים</title>
+<meta name="description" content="מספרה לגברים עם סטייל. שערי העיר, יפו 216, ירושלים. הזמנת תור אונליין.">
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
 
-<header class="bar">
-  <div class="inner">
-    <span class="brand" id="brand">The Barbershop</span>
-    <span class="spacer"></span>
-    <span id="whoami" class="small muted"></span>
-    <button id="langBtn" class="tiny ghost lang">EN</button>
-    <button id="homeBtn" class="tiny ghost hidden">Home</button>
-    <button id="outBtn" class="tiny ghost hidden">Sign out</button>
-  </div>
+<div class="grain" aria-hidden="true"></div>
+<div class="cursor" id="cursor" aria-hidden="true"></div>
+
+<header class="nav" id="nav">
+  <a class="logo" href="#top">RICO<span>BARBERS</span></a>
+  <nav class="navlinks">
+    <a href="#services" data-i="navServices">שירותים</a>
+    <a href="#hours" data-i="navHours">שעות</a>
+    <a href="#visit" data-i="navVisit">איפה</a>
+  </nav>
+  <button class="lang" id="langBtn">EN</button>
+  <a class="cta" href="app.html" data-i="book">הזמן תור</a>
 </header>
 
-<main class="wrap" id="view"></main>
+<main id="top">
 
-<script type="module" src="app.js"></script>
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow" id="eyebrow"><span class="dot"></span><span id="openState">&nbsp;</span></p>
+      <h1 class="title" id="title" aria-label="RICO BARBERS">
+        <span class="line" data-text="RICO"></span>
+        <span class="line thin" data-text="BARBERS"></span>
+      </h1>
+      <p class="lede" id="tagline">מספרה לגברים עם סטייל</p>
+      <div class="hero-actions">
+        <a class="btn solid" href="app.html" data-i="bookNow">הזמנת תור</a>
+        <a class="btn line-btn" id="waBtn" href="#" data-i="whatsapp">וואטסאפ</a>
+      </div>
+    </div>
+    <div class="scrollcue" aria-hidden="true"><span></span></div>
+  </section>
+
+  <!-- ============ POLE ============ -->
+  <div class="pole" aria-hidden="true"></div>
+
+  <!-- ============ MARQUEE ============ -->
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track" id="marquee"></div>
+  </div>
+
+  <!-- ============ ABOUT ============ -->
+  <section class="section about reveal" id="about">
+    <div class="grid">
+      <div class="col-num">
+        <span class="bignum" id="years">0</span>
+        <span class="numlabel" data-i="yearsLabel">שנות ניסיון</span>
+      </div>
+      <div class="col-text">
+        <h2 class="kicker" data-i="aboutKicker">על המספרה</h2>
+        <p class="big" id="about-text">מספרה לגברים עם סטייל, אווירה טובה ושירות ברמה הכי גבוהה.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SERVICES ============ -->
+  <section class="section services" id="services">
+    <h2 class="kicker reveal" data-i="servicesKicker">מחירון</h2>
+    <div class="rows" id="services-list"></div>
+    <p class="fineprint reveal" data-i="pricesNote">המחירים מתעדכנים מעת לעת. התשלום במספרה.</p>
+  </section>
+
+  <!-- ============ HOURS ============ -->
+  <section class="section hours" id="hours">
+    <h2 class="kicker reveal" data-i="hoursKicker">שעות פתיחה</h2>
+    <div class="hourgrid" id="hours-list"></div>
+  </section>
+
+  <!-- ============ VISIT ============ -->
+  <section class="section visit" id="visit">
+    <h2 class="kicker reveal" data-i="visitKicker">איפה אנחנו</h2>
+    <p class="address reveal" id="address">שערי העיר, יפו 216, ירושלים</p>
+    <div class="linkrow reveal">
+      <a class="btn line-btn" id="mapsBtn" href="#" data-i="maps">Google Maps</a>
+      <a class="btn line-btn" id="telBtn" href="#" data-i="call">התקשרו</a>
+      <a class="btn line-btn" id="igBtn" href="#" data-i="instagram">Instagram</a>
+    </div>
+    <p class="fineprint reveal" id="policy"></p>
+  </section>
+
+  <!-- ============ CLOSER ============ -->
+  <section class="closer">
+    <h2 class="closer-title reveal" data-i="closer">כיסא אחד.<br>תור אחד.</h2>
+    <a class="btn solid big" href="app.html" data-i="bookNow">הזמנת תור</a>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <span>RICO BARBERS · ירושלים</span>
+  <a href="app.html" data-i="staff">כניסת צוות</a>
+</footer>
+
+<a class="sticky-cta" href="app.html" data-i="book">הזמן תור</a>
+
+<script type="module" src="site.js"></script>
 </body>
 </html>

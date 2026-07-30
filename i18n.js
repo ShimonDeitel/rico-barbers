@@ -3,7 +3,7 @@
 export const STRINGS = {
   he: {
     dir: 'rtl', locale: 'he-IL', other: 'English', otherShort: 'EN',
-    brand: 'המספרה',
+    brand: 'RICO BARBERS',
     home: 'דף הבית', signOut: 'התנתקות',
 
     landingTitle: 'קבעו תור.<br>נהלו את המספרה.',
@@ -62,6 +62,21 @@ export const STRINGS = {
     label: 'תיאור', created: 'נוצר', active: 'פעיל', usedOff: 'נוצל / כבוי',
     disable: 'כיבוי',
     codesFoot: 'הקודים לא נשמרים בצורה קריאה — רק גיבוב bcrypt. קוד חדש מוצג פעם אחת, העתיקו אותו לפני שאתם עוזבים את הדף.',
+
+    siteSection: 'תוכן האתר',
+    siteIntro: 'כל מה שמופיע בעמוד הראשי של האתר. שינוי כאן מתעדכן באתר מיד.',
+    taglineHe: 'משפט פתיחה (עברית)', taglineEn: 'משפט פתיחה (אנגלית)',
+    aboutHe: 'על המספרה (עברית)', aboutEn: 'על המספרה (אנגלית)',
+    addressHe: 'כתובת (עברית)', addressEn: 'כתובת (אנגלית)',
+    phoneField: 'טלפון', whatsappField: 'וואטסאפ (מספר בינלאומי)',
+    instagramField: 'קישור לאינסטגרם', mapsField: 'קישור לניווט',
+    yearsField: 'שנות ניסיון',
+    policyHe: 'תקנון (עברית)', policyEn: 'תקנון (אנגלית)',
+    priceList: 'מחירון', addService: 'הוספת שירות',
+    svcHe: 'שם בעברית', svcEn: 'שם באנגלית', svcPrice: 'מחיר', svcMin: 'דקות',
+    openHours: 'שעות פתיחה', openAt: 'פתיחה', closeAt: 'סגירה', closedDay: 'סגור',
+    saveSite: 'שמירת תוכן האתר', siteSaved: 'תוכן האתר נשמר.',
+    viewSite: 'צפייה באתר',
 
     emailSection: 'התראות באימייל',
     emailIntro: 'הספר מקבל אימייל ברגע שנקבע תור, והלקוח מקבל אישור. פתחו חשבון שליחה חינמי (Brevo נותנת 300 אימיילים ביום בחינם), אמתו את הכתובת שממנה תשלחו, הדביקו כאן את מפתח ה-API פעם אחת וזה הכל.',
@@ -122,7 +137,7 @@ export const STRINGS = {
 
   en: {
     dir: 'ltr', locale: 'en-GB', other: 'עברית', otherShort: 'עב',
-    brand: 'The Barbershop',
+    brand: 'RICO BARBERS',
     home: 'Home', signOut: 'Sign out',
 
     landingTitle: 'Book a chair.<br>Run the shop.',
@@ -181,6 +196,21 @@ export const STRINGS = {
     label: 'Label', created: 'Created', active: 'active', usedOff: 'used / off',
     disable: 'Disable',
     codesFoot: 'Codes are never stored in readable form — only a bcrypt hash. A generated code is shown once; copy it before you leave the page.',
+
+    siteSection: 'Website content',
+    siteIntro: 'Everything shown on the public front page. Saving here updates the site immediately.',
+    taglineHe: 'Tagline (Hebrew)', taglineEn: 'Tagline (English)',
+    aboutHe: 'About (Hebrew)', aboutEn: 'About (English)',
+    addressHe: 'Address (Hebrew)', addressEn: 'Address (English)',
+    phoneField: 'Phone', whatsappField: 'WhatsApp (international number)',
+    instagramField: 'Instagram link', mapsField: 'Directions link',
+    yearsField: 'Years of experience',
+    policyHe: 'Policy (Hebrew)', policyEn: 'Policy (English)',
+    priceList: 'Price list', addService: 'Add a service',
+    svcHe: 'Name in Hebrew', svcEn: 'Name in English', svcPrice: 'Price', svcMin: 'Minutes',
+    openHours: 'Opening hours', openAt: 'Opens', closeAt: 'Closes', closedDay: 'Closed',
+    saveSite: 'Save website content', siteSaved: 'Website content saved.',
+    viewSite: 'View the site',
 
     emailSection: 'Email notifications',
     emailIntro: 'Barbers get an email the moment someone books, and customers get a confirmation. Create a free sender account (Brevo gives 300 emails a day for free), verify the address you want to send from, paste the API key here once, and you are done.',
