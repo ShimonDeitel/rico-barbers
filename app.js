@@ -772,6 +772,14 @@ async function route() {
 }
 
 addEventListener('hashchange', () => { scrollTo(0, 0); route(); });
+
+/* Tapping a link for the page you are already on fires no hashchange, so the
+   view would sit there — e.g. "book" while still on a booking confirmation. */
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  if (a.getAttribute('href') === (location.hash || '#/')) { e.preventDefault(); scrollTo(0, 0); route(); }
+});
 addEventListener('scroll', () => {
   if (currentRoute() === 'home') $('#nav').classList.toggle('stuck', scrollY > 30);
 }, { passive: true });
