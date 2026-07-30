@@ -37,6 +37,10 @@ header.bar .inner > span#whoami {
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 header.bar .inner button { flex: 0 0 auto; white-space: nowrap; }
+button.lang {
+  min-width: 44px; font-weight: 700; letter-spacing: .04em;
+  font-size: 12px; padding: 8px 10px;
+}
 @media (max-width: 520px) {
   .brand { font-size: 11px; letter-spacing: .1em; }
   header.bar .inner { gap: 8px; padding: 10px 14px; }

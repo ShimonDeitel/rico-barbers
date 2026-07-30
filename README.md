@@ -5,6 +5,14 @@ Works on phone, tablet and desktop. Black and white. The customer side is entire
 
 Static front end (GitHub Pages) + Supabase for auth, database, storage.
 
+## Languages
+
+The whole app is bilingual — Hebrew (RTL) and English (LTR) — with a toggle in the header on
+every screen. It opens in Hebrew by default. The choice is remembered in the browser and saved
+on the account, so notifications and emails go out in each person's own language: a Hebrew-speaking
+barber gets the booking alert in Hebrew while the same booking sends the customer an English
+confirmation. All strings live in `i18n.js`; adding a third language means adding one object there.
+
 ## How it works
 
 1. **Everyone signs in** with their own email + password. A new account is always a plain customer.
@@ -81,6 +89,7 @@ Every attempt is logged with the provider's real HTTP status, so a bounce is vis
 
 - `index.html` — shell, plus the Content Security Policy
 - `app.js` — all screens and logic (vanilla ES modules, no build step)
+- `i18n.js` — every user-facing string, Hebrew and English
 - `styles.css` — black and white, responsive
 - `vendor/` — pinned copy of the Supabase client, so the app loads no third-party script
 - `schema.sql` — full database schema, policies and functions, for reference

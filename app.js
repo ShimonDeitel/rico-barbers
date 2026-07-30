@@ -1,4 +1,5 @@
 import { createClient } from './vendor/supabase.js';
+import { STRINGS } from './i18n.js';
 
 const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';
@@ -12,13 +13,37 @@ const view = document.getElementById('view');
 const whoami = document.getElementById('whoami');
 const outBtn = document.getElementById('outBtn');
 const homeBtn = document.getElementById('homeBtn');
+const langBtn = document.getElementById('langBtn');
+const brandEl = document.getElementById('brand');
 
-let state = { portal: null, session: null, role: 'customer', profile: null };
+/* ---------------- state ---------------- */
+let state = { portal: null, session: null, role: 'customer', profile: null, lang: 'he' };
 const PORTAL_KEY = 'bs.portal';
-try { state.portal = localStorage.getItem(PORTAL_KEY) || null; } catch (e) { /* private mode */ }
+const LANG_KEY = 'bs.lang';
+try {
+  state.portal = localStorage.getItem(PORTAL_KEY) || null;
+  const saved = localStorage.getItem(LANG_KEY);
+  if (saved === 'he' || saved === 'en') state.lang = saved;
+} catch (e) { /* private mode */ }
+
 function setPortal(p) {
   state.portal = p;
   try { p ? localStorage.setItem(PORTAL_KEY, p) : localStorage.removeItem(PORTAL_KEY); } catch (e) { /* ignore */ }
+}
+
+/** The active dictionary. */
+let T = STRINGS[state.lang];
+
+async function setLang(l) {
+  if (l !== 'he' && l !== 'en') return;
+  state.lang = l;
+  T = STRINGS[l];
+  try { localStorage.setItem(LANG_KEY, l); } catch (e) { /* ignore */ }
+  // remember it on the account too, so emails arrive in the same language
+  if (state.session) {
+    await sb.from('profiles').update({ lang: l }).eq('id', state.session.user.id);
+  }
+  await route();
 }
 
 /* ---------------- helpers ---------------- */
@@ -27,17 +52,24 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<'
 const $ = (sel, root = view) => root.querySelector(sel);
 const $$ = (sel, root = view) => [...root.querySelectorAll(sel)];
 
-function render(html, rtl = false) {
-  document.documentElement.dir = rtl ? 'rtl' : 'ltr';
-  document.documentElement.lang = rtl ? 'he' : 'en';
+function render(html) {
+  document.documentElement.dir = T.dir;
+  document.documentElement.lang = state.lang;
   view.innerHTML = html;
   window.scrollTo(0, 0);
 }
+
+/** Server errors come back in English; show them in the reader's language. */
+function humanError(msg) {
+  const raw = String(msg || '');
+  return T.errors?.[raw] || raw;
+}
 function note(msg, isErr = false) {
   const old = $('#msg'); if (old) old.remove();
-  view.prepend(el(`<div class="note ${isErr ? 'err' : ''}" id="msg">${esc(msg)}</div>`));
+  view.prepend(el(`<div class="note ${isErr ? 'err' : ''}" id="msg">${esc(isErr ? humanError(msg) : msg)}</div>`));
   window.scrollTo(0, 0);
 }
+
 function photoUrl(path) {
   if (!path) return null;
   return sb.storage.from('photos').getPublicUrl(path).data.publicUrl;
@@ -49,9 +81,9 @@ function avatar(name, path, cls = '') {
            : `<div class="avatar ${cls}">${initials}</div>`;
 }
 const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
-const fmtDate = (iso, loc = 'en-GB') => new Date(iso).toLocaleDateString(loc, { weekday: 'short', day: '2-digit', month: 'short', timeZone: TZ });
+const fmtDate = (iso) => new Date(iso).toLocaleDateString(T.locale, { weekday: 'short', day: '2-digit', month: 'short', timeZone: TZ });
 const todayISO = () => new Date(new Date().toLocaleString('en-US', { timeZone: TZ })).toISOString().slice(0, 10);
-const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const statusLabel = (s) => T[s] || s;
 
 async function loadMe() {
   const { data: { session } } = await sb.auth.getSession();
@@ -71,18 +103,34 @@ async function loadMe() {
   state.role = r?.role || 'customer';
   state.profile = p || null;
 }
+
 function chrome() {
   const on = !!state.session;
+  brandEl.textContent = T.brand;
+  langBtn.textContent = T.otherShort;
+  langBtn.setAttribute('aria-label', T.other);
+  langBtn.title = T.other;
+  homeBtn.textContent = T.home;
+  outBtn.textContent = T.signOut;
   outBtn.classList.toggle('hidden', !on);
   homeBtn.classList.toggle('hidden', !state.portal);
-  whoami.textContent = on ? `${state.session.user.email} · ${state.role}` : '';
+  whoami.textContent = on ? `${state.session.user.email} · ${T[roleKey(state.role)]}` : '';
 }
+const roleKey = (r) => r === 'manager' ? 'roleManagerOpt' : r === 'barber' ? 'roleBarberOpt' : 'roleCustomerOpt';
+
+langBtn.onclick = () => setLang(state.lang === 'he' ? 'en' : 'he');
 outBtn.onclick = async () => { await sb.auth.signOut(); setPortal(null); await route(); };
 homeBtn.onclick = async () => { setPortal(null); await route(); };
 
 /* ---------------- router ---------------- */
 async function route() {
   await loadMe();
+  // an account's saved language wins the first time we see it in this browser
+  if (state.profile?.lang && state.profile.lang !== state.lang) {
+    let hadChoice = false;
+    try { hadChoice = !!localStorage.getItem(LANG_KEY); } catch (e) { /* ignore */ }
+    if (!hadChoice) { state.lang = state.profile.lang; T = STRINGS[state.lang]; }
+  }
   chrome();
   if (!state.portal) return landing();
   if (!state.session) return authScreen();
@@ -94,52 +142,50 @@ async function route() {
 /* ---------------- landing ---------------- */
 function landing() {
   render(`
-    <h1>Book a chair.<br>Run the shop.</h1>
-    <p class="sub">Choose how you want to sign in.</p>
+    <h1>${T.landingTitle}</h1>
+    <p class="sub">${esc(T.landingSub)}</p>
     <div class="roles">
-      <button class="role-card" data-p="barber"><span class="k">Barber</span><span class="d">Your schedule and your appointments. Access code required.</span></button>
-      <button class="role-card" data-p="manager"><span class="k">Manager</span><span class="d">Everything and everyone. Master code required.</span></button>
-      <button class="role-card" data-p="customer"><span class="k">Customer / לקוחות</span><span class="d">קבעו תור אצל הספר שלכם</span></button>
+      <button class="role-card" data-p="barber"><span class="k">${esc(T.roleBarber)}</span><span class="d">${esc(T.roleBarberD)}</span></button>
+      <button class="role-card" data-p="manager"><span class="k">${esc(T.roleManager)}</span><span class="d">${esc(T.roleManagerD)}</span></button>
+      <button class="role-card" data-p="customer"><span class="k">${esc(T.roleCustomer)}</span><span class="d">${esc(T.roleCustomerD)}</span></button>
     </div>
     <hr>
-    <p class="small muted">Every account is protected by email + password. Barber and manager access is granted only with a 10-digit code, verified on the server. All data is protected by per-row database policies.</p>
+    <p class="small muted">${esc(T.landingFoot)}</p>
   `);
   $$('.role-card').forEach(b => b.onclick = async () => { setPortal(b.dataset.p); await route(); });
 }
 
 /* ---------------- auth ---------------- */
 function authScreen() {
-  const he = state.portal === 'customer';
-  const t = he
-    ? { title: 'התחברות', sub: 'התחברו או צרו חשבון כדי לקבוע תור.', email: 'אימייל', pass: 'סיסמה', name: 'שם מלא', phone: 'טלפון', inBtn: 'התחברות', upBtn: 'הרשמה', toUp: 'אין לכם חשבון? הרשמה', toIn: 'יש לכם חשבון? התחברות' }
-    : { title: 'Sign in', sub: `Sign in to the ${state.portal} portal.`, email: 'Email', pass: 'Password', name: 'Full name', phone: 'Phone', inBtn: 'Sign in', upBtn: 'Create account', toUp: "No account? Create one", toIn: 'Have an account? Sign in' };
+  const sub = state.portal === 'customer' ? T.authSubCustomer
+            : state.portal === 'barber' ? T.authSubBarber : T.authSubManager;
 
   render(`
-    <h1>${esc(t.title)}</h1>
-    <p class="sub">${esc(t.sub)}</p>
+    <h1>${esc(T.signIn)}</h1>
+    <p class="sub">${esc(sub)}</p>
     <div class="card">
       <div id="upOnly" class="hidden">
-        <label>${esc(t.name)}</label><input id="fname" autocomplete="name">
-        <label>${esc(t.phone)}</label><input id="fphone" inputmode="tel" autocomplete="tel">
+        <label>${esc(T.fullName)}</label><input id="fname" autocomplete="name">
+        <label>${esc(T.phone)}</label><input id="fphone" inputmode="tel" autocomplete="tel">
       </div>
-      <label>${esc(t.email)}</label><input id="femail" type="email" inputmode="email" autocomplete="email">
-      <label>${esc(t.pass)}</label><input id="fpass" type="password" autocomplete="current-password">
+      <label>${esc(T.email)}</label><input id="femail" type="email" inputmode="email" autocomplete="email">
+      <label>${esc(T.password)}</label><input id="fpass" type="password" autocomplete="current-password">
       <div style="height:16px"></div>
-      <button id="go">${esc(t.inBtn)}</button>
-      <div class="center"><button class="link" id="toggle">${esc(t.toUp)}</button></div>
+      <button id="go">${esc(T.signIn)}</button>
+      <div class="center"><button class="link" id="toggle">${esc(T.toSignUp)}</button></div>
     </div>
-  `, he);
+  `);
 
   let mode = 'in';
   $('#toggle').onclick = () => {
     mode = mode === 'in' ? 'up' : 'in';
     $('#upOnly').classList.toggle('hidden', mode === 'in');
-    $('#go').textContent = mode === 'in' ? t.inBtn : t.upBtn;
-    $('#toggle').textContent = mode === 'in' ? t.toUp : t.toIn;
+    $('#go').textContent = mode === 'in' ? T.signIn : T.signUp;
+    $('#toggle').textContent = mode === 'in' ? T.toSignUp : T.toSignIn;
   };
   $('#go').onclick = async () => {
     const email = $('#femail').value.trim(), password = $('#fpass').value;
-    if (!email || password.length < 8) return note(he ? 'נדרש אימייל וסיסמה של 8 תווים לפחות.' : 'Email and a password of at least 8 characters are required.', true);
+    if (!email || password.length < 8) return note(T.needEmailPass, true);
     $('#go').disabled = true;
     try {
       if (mode === 'up') {
@@ -149,6 +195,9 @@ function authScreen() {
       }
       const { error: e2 } = await sb.auth.signInWithPassword({ email, password });
       if (e2) throw e2;
+      // the account inherits the language the person is reading right now
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) await sb.from('profiles').update({ lang: state.lang }).eq('id', session.user.id);
       await route();
     } catch (e) {
       $('#go').disabled = false;
@@ -160,14 +209,14 @@ function authScreen() {
 /* ---------------- access code gate ---------------- */
 function codeGate(want) {
   render(`
-    <h1>${want === 'manager' ? 'Manager access' : 'Barber access'}</h1>
-    <p class="sub">Enter your 10-digit code. ${want === 'manager' ? 'Only the shop owner has the master code.' : 'The manager issues barber codes.'}</p>
+    <h1>${esc(want === 'manager' ? T.managerAccess : T.barberAccess)}</h1>
+    <p class="sub">${esc(want === 'manager' ? T.codeSubManager : T.codeSubBarber)}</p>
     <div class="card">
-      <label>Access code</label>
+      <label>${esc(T.accessCode)}</label>
       <input id="code" class="mono" inputmode="numeric" maxlength="10" placeholder="0000000000">
       <div style="height:16px"></div>
-      <button id="go">Unlock</button>
-      <p class="small muted center" style="margin:12px 0 0">Codes are stored only as bcrypt hashes. 5 wrong attempts per hour locks you out.</p>
+      <button id="go">${esc(T.unlock)}</button>
+      <p class="small muted center" style="margin:12px 0 0">${esc(T.codeFoot)}</p>
     </div>
   `);
   $('#go').onclick = async () => {
@@ -176,7 +225,7 @@ function codeGate(want) {
     const { data, error } = await sb.rpc('redeem_access_code', { p_code: code });
     $('#go').disabled = false;
     if (error) return note(error.message, true);
-    if (want === 'manager' && data !== 'manager') return note('That code is a barber code, not the master code.', true);
+    if (want === 'manager' && data !== 'manager') return note(T.notMaster, true);
     await route();
   };
 }
@@ -184,7 +233,7 @@ function codeGate(want) {
 /* ================= BARBER ================= */
 async function barberPortal() {
   const uid = state.session.user.id;
-  render(`<h1>Your chair</h1><p class="sub">Loading…</p>`);
+  render(`<h1>${esc(T.yourChair)}</h1><p class="sub">${esc(T.loading)}</p>`);
   const [appts, avail, off, notifs] = await Promise.all([
     sb.from('appointments').select('*').eq('barber_id', uid).gte('starts_at', new Date(Date.now() - 864e5).toISOString()).order('starts_at'),
     sb.from('availability').select('*').eq('barber_id', uid).order('weekday').order('start_time'),
@@ -193,85 +242,84 @@ async function barberPortal() {
   ]);
   const p = state.profile || {};
   const unread = (notifs.data || []).filter(n => !n.read).length;
+  const open = (appts.data || []).filter(a => a.status === 'booked');
 
   render(`
-    <h1>Your chair</h1>
-    <p class="sub">${esc(p.full_name || state.session.user.email)}${unread ? ` · <span class="pill fill">${unread} new</span>` : ''}</p>
+    <h1>${esc(T.yourChair)}</h1>
+    <p class="sub">${esc(p.full_name || state.session.user.email)}${unread ? ` · <span class="pill fill">${unread} ${esc(T.newBadge)}</span>` : ''}</p>
 
-    <h2>Upcoming appointments</h2>
+    <h2>${esc(T.upcoming)}</h2>
     <div class="list" id="appts">
-      ${(appts.data || []).filter(a => a.status === 'booked').length === 0
-        ? `<p class="muted">Nothing booked yet.</p>`
-        : (appts.data || []).filter(a => a.status === 'booked').map(a => `
+      ${open.length === 0 ? `<p class="muted">${esc(T.nothingBooked)}</p>` : open.map(a => `
         <div class="card tight between">
           <div>
             <h3>${fmtDate(a.starts_at)} · ${fmtTime(a.starts_at)}</h3>
             <div class="small muted">${esc(a.customer_name)} · ${esc(a.customer_phone)}${a.notes ? ' · ' + esc(a.notes) : ''}</div>
           </div>
-          <button class="tiny ghost" data-cancel="${a.id}">Cancel</button>
+          <button class="tiny ghost" data-cancel="${a.id}">${esc(T.cancel)}</button>
         </div>`).join('')}
     </div>
 
-    <h2>Notifications</h2>
+    <h2>${esc(T.notifications)}</h2>
     <div class="list">
-      ${(notifs.data || []).length === 0 ? `<p class="muted">No notifications.</p>` : (notifs.data || []).map(n => `
+      ${(notifs.data || []).length === 0 ? `<p class="muted">${esc(T.noNotifications)}</p>` : (notifs.data || []).map(n => `
         <div class="card tight">
-          <h3>${n.read ? '' : '<span class="pill fill">new</span> '}${esc(n.title)}</h3>
+          <h3>${n.read ? '' : `<span class="pill fill">${esc(T.newBadge)}</span> `}${esc(n.title)}</h3>
           <div class="small muted">${esc(n.body)} — ${fmtDate(n.created_at)} ${fmtTime(n.created_at)}</div>
         </div>`).join('')}
     </div>
-    ${unread ? `<button class="ghost" id="markRead">Mark all as read</button>` : ''}
+    ${unread ? `<button class="ghost" id="markRead">${esc(T.markRead)}</button>` : ''}
 
-    <h2>Your profile</h2>
+    <h2>${esc(T.yourProfile)}</h2>
     <div class="card">
       <div class="between" style="margin-bottom:12px">
         ${avatar(p.full_name, p.photo_path, 'lg')}
         <div style="flex:1">
-          <label>Photo (JPG / PNG / WebP, max 3 MB)</label>
+          <label>${esc(T.photoLabel)}</label>
           <input type="file" id="photo" accept="image/jpeg,image/png,image/webp">
         </div>
       </div>
       <div class="grid2">
-        <div><label>Full name</label><input id="pname" value="${esc(p.full_name || '')}"></div>
-        <div><label>Phone</label><input id="pphone" value="${esc(p.phone || '')}"></div>
+        <div><label>${esc(T.fullName)}</label><input id="pname" value="${esc(p.full_name || '')}"></div>
+        <div><label>${esc(T.phone)}</label><input id="pphone" value="${esc(p.phone || '')}"></div>
       </div>
-      <label>About you (customers see this)</label>
+      <label>${esc(T.aboutYou)}</label>
       <textarea id="pbio">${esc(p.bio || '')}</textarea>
       <div class="grid2">
-        <div><label>Appointment length (minutes)</label><input id="pslot" type="number" min="10" max="180" step="5" value="${p.slot_minutes || 30}"></div>
-        <div><label>Visible to customers</label>
-          <select id="pactive"><option value="1"${p.active ? ' selected' : ''}>Yes</option><option value="0"${p.active ? '' : ' selected'}>No</option></select>
+        <div><label>${esc(T.apptLength)}</label><input id="pslot" type="number" min="10" max="180" step="5" value="${p.slot_minutes || 30}"></div>
+        <div><label>${esc(T.visibleToCustomers)}</label>
+          <select id="pactive"><option value="1"${p.active ? ' selected' : ''}>${esc(T.yes)}</option><option value="0"${p.active ? '' : ' selected'}>${esc(T.no)}</option></select>
         </div>
       </div>
       <div style="height:16px"></div>
-      <button id="saveProfile">Save profile</button>
+      <button id="saveProfile">${esc(T.saveProfile)}</button>
     </div>
 
-    <h2>Weekly hours</h2>
+    <h2>${esc(T.weeklyHours)}</h2>
     <div class="card">
       <div class="list" id="availList">
-        ${(avail.data || []).length === 0 ? `<p class="muted">No hours set — customers cannot book yet.</p>` :
-          (avail.data || []).map(a => `<div class="card tight between"><div><h3>${DAYS_EN[a.weekday]}</h3><div class="small muted mono">${a.start_time.slice(0, 5)} – ${a.end_time.slice(0, 5)}</div></div><button class="tiny ghost" data-delav="${a.id}">Remove</button></div>`).join('')}
+        ${(avail.data || []).length === 0 ? `<p class="muted">${esc(T.noHours)}</p>` :
+          (avail.data || []).map(a => `<div class="card tight between"><div><h3>${esc(T.days[a.weekday])}</h3><div class="small muted mono">${a.start_time.slice(0, 5)} – ${a.end_time.slice(0, 5)}</div></div><button class="tiny ghost" data-delav="${a.id}">${esc(T.remove)}</button></div>`).join('')}
       </div>
       <hr>
       <div class="sched-row">
-        <div><label>Day</label><select id="avDay">${DAYS_EN.map((d, i) => `<option value="${i}">${d}</option>`).join('')}</select></div>
-        <div><label>From</label><input id="avFrom" type="time" value="09:00"></div>
-        <div><label>To</label><input id="avTo" type="time" value="18:00"></div>
-        <div><button class="tiny" id="addAv">Add</button></div>
+        <div><label>${esc(T.day)}</label><select id="avDay">${T.days.map((d, i) => `<option value="${i}">${esc(d)}</option>`).join('')}</select></div>
+        <div><label>${esc(T.from)}</label><input id="avFrom" type="time" value="09:00"></div>
+        <div><label>${esc(T.to)}</label><input id="avTo" type="time" value="18:00"></div>
+        <div><button class="tiny" id="addAv">${esc(T.add)}</button></div>
       </div>
     </div>
 
-    <h2>Days off</h2>
+    <h2>${esc(T.daysOff)}</h2>
     <div class="card">
       <div class="list">
-        ${(off.data || []).length === 0 ? `<p class="muted">None.</p>` : (off.data || []).map(o => `<div class="card tight between"><div>${o.day}${o.note ? ' · ' + esc(o.note) : ''}</div><button class="tiny ghost" data-deloff="${o.id}">Remove</button></div>`).join('')}
+        ${(off.data || []).length === 0 ? `<p class="muted">${esc(T.none)}</p>` : (off.data || []).map(o => `<div class="card tight between"><div>${o.day}${o.note ? ' · ' + esc(o.note) : ''}</div><button class="tiny ghost" data-deloff="${o.id}">${esc(T.remove)}</button></div>`).join('')}
       </div>
       <hr>
       <div class="row">
-        <div><label>Date</label><input id="offDay" type="date" min="${todayISO()}"></div>
-        <div><label>Reason (optional)</label><input id="offNote"></div>
-        <div style="display:flex;align-items:end"><button class="tiny" id="addOff">Add</button></div>
+        <div><label>${esc(T.date)}</label><input id="offDay" type="date" min="${todayISO()}"></div>
+        <div><label>${esc(T.reasonOpt)}</label><input id="offNote"></div>
+        <div style="display:flex;align-items:end"><button class="tiny" id="addOff">${esc(T.add)}</button></div>
       </div>
     </div>
   `);
@@ -280,7 +328,7 @@ async function barberPortal() {
     const f = $('#photo').files[0];
     let photo_path = p.photo_path || null;
     if (f) {
-      if (f.size > 3 * 1024 * 1024) return note('Photo is larger than 3 MB.', true);
+      if (f.size > 3 * 1024 * 1024) return note(T.photoTooBig, true);
       const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
       const path = `${uid}/avatar.${ext}`;
       const { error } = await sb.storage.from('photos').upload(path, f, { upsert: true, contentType: f.type });
@@ -296,7 +344,7 @@ async function barberPortal() {
       photo_path
     }).eq('id', uid);
     if (error) return note(error.message, true);
-    await barberPortal(); note('Profile saved.');
+    await barberPortal(); note(T.profileSaved);
   };
   $('#addAv').onclick = async () => {
     const { error } = await sb.from('availability').insert({
@@ -307,7 +355,7 @@ async function barberPortal() {
     await barberPortal();
   };
   $('#addOff').onclick = async () => {
-    if (!$('#offDay').value) return note('Pick a date.', true);
+    if (!$('#offDay').value) return note(T.pickDate, true);
     const { error } = await sb.from('time_off').insert({ barber_id: uid, day: $('#offDay').value, note: $('#offNote').value.trim() });
     if (error) return note(error.message, true);
     await barberPortal();
@@ -325,7 +373,7 @@ async function barberPortal() {
 
 /* ================= MANAGER ================= */
 async function managerPortal() {
-  render(`<h1>Manager</h1><p class="sub">Loading…</p>`);
+  render(`<h1>${esc(T.manager)}</h1><p class="sub">${esc(T.loading)}</p>`);
   const [users, appts, codes, settings, mail, sec] = await Promise.all([
     sb.rpc('list_users'),
     sb.from('appointments').select('*').gte('starts_at', new Date(Date.now() - 7 * 864e5).toISOString()).order('starts_at'),
@@ -341,103 +389,99 @@ async function managerPortal() {
   const barbers = (users.data || []).filter(u => u.role === 'barber');
 
   render(`
-    <h1>Manager</h1>
-    <p class="sub">${(users.data || []).length} accounts · ${barbers.length} barbers · ${booked.length} appointments booked</p>
+    <h1>${esc(T.manager)}</h1>
+    <p class="sub">${(users.data || []).length} ${esc(T.statsAccounts)} · ${barbers.length} ${esc(T.statsBarbers)} · ${booked.length} ${esc(T.statsBooked)}</p>
 
-    <h2>Appointments</h2>
+    <h2>${esc(T.appointments)}</h2>
     <div class="scroll"><table>
-      <tr><th>When</th><th>Barber</th><th>Customer</th><th>Phone</th><th>Status</th><th></th></tr>
-      ${(appts.data || []).length === 0 ? `<tr><td colspan="6" class="muted">Nothing yet.</td></tr>` : (appts.data || []).map(a => `
+      <tr><th>${esc(T.when)}</th><th>${esc(T.barber)}</th><th>${esc(T.customer)}</th><th>${esc(T.phone)}</th><th>${esc(T.status)}</th><th></th></tr>
+      ${(appts.data || []).length === 0 ? `<tr><td colspan="6" class="muted">${esc(T.nothingYet)}</td></tr>` : (appts.data || []).map(a => `
         <tr>
           <td>${fmtDate(a.starts_at)} ${fmtTime(a.starts_at)}</td>
           <td>${esc(byId[a.barber_id]?.full_name || '—')}</td>
           <td>${esc(a.customer_name)}</td>
           <td>${esc(a.customer_phone)}</td>
-          <td>${a.status === 'booked' ? '<span class="pill">booked</span>' : `<span class="pill off">${esc(a.status)}</span>`}</td>
-          <td>${a.status === 'booked' ? `<button class="tiny ghost" data-cancel="${a.id}">Cancel</button>` : ''}</td>
+          <td>${a.status === 'booked' ? `<span class="pill">${esc(T.booked)}</span>` : `<span class="pill off">${esc(statusLabel(a.status))}</span>`}</td>
+          <td>${a.status === 'booked' ? `<button class="tiny ghost" data-cancel="${a.id}">${esc(T.cancel)}</button>` : ''}</td>
         </tr>`).join('')}
     </table></div>
 
-    <h2>People</h2>
+    <h2>${esc(T.people)}</h2>
     <div class="scroll"><table>
-      <tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Visible</th></tr>
+      <tr><th>${esc(T.name)}</th><th>${esc(T.email)}</th><th>${esc(T.phone)}</th><th>${esc(T.role)}</th><th>${esc(T.visible)}</th></tr>
       ${(users.data || []).map(u => `
         <tr>
           <td>${esc(u.full_name || '—')}</td>
           <td class="small">${esc(u.email)}</td>
           <td class="small">${esc(u.phone || '—')}</td>
           <td><select data-role="${u.id}">
-            ${['customer', 'barber', 'manager'].map(r => `<option value="${r}"${u.role === r ? ' selected' : ''}>${r}</option>`).join('')}
+            ${['customer', 'barber', 'manager'].map(r => `<option value="${r}"${u.role === r ? ' selected' : ''}>${esc(T[roleKey(r)])}</option>`).join('')}
           </select></td>
-          <td>${u.role === 'barber' ? `<button class="tiny ghost" data-vis="${u.id}" data-on="${u.active ? 1 : 0}">${u.active ? 'Hide' : 'Show'}</button>` : '—'}</td>
+          <td>${u.role === 'barber' ? `<button class="tiny ghost" data-vis="${u.id}" data-on="${u.active ? 1 : 0}">${esc(u.active ? T.hide : T.show)}</button>` : '—'}</td>
         </tr>`).join('')}
     </table></div>
 
-    <h2>Barber access codes</h2>
+    <h2>${esc(T.codes)}</h2>
     <div class="card">
-      <label>Label (e.g. the barber's name)</label>
+      <label>${esc(T.codeLabelField)}</label>
       <input id="codeLabel" placeholder="Yossi">
       <div style="height:12px"></div>
-      <button id="mint">Generate a single-use barber code</button>
+      <button id="mint">${esc(T.mint)}</button>
       <div id="codeOut"></div>
     </div>
     <div class="scroll"><table>
-      <tr><th>Label</th><th>Role</th><th>Status</th><th>Created</th><th></th></tr>
+      <tr><th>${esc(T.label)}</th><th>${esc(T.role)}</th><th>${esc(T.status)}</th><th>${esc(T.created)}</th><th></th></tr>
       ${(codes.data || []).map(c => `
         <tr>
-          <td>${esc(c.label || '—')}</td><td>${esc(c.role)}</td>
-          <td>${c.active ? '<span class="pill">active</span>' : '<span class="pill off">used / off</span>'}</td>
+          <td>${esc(c.label || '—')}</td><td>${esc(T[roleKey(c.role)])}</td>
+          <td>${c.active ? `<span class="pill">${esc(T.active)}</span>` : `<span class="pill off">${esc(T.usedOff)}</span>`}</td>
           <td class="small">${fmtDate(c.created_at)}</td>
-          <td>${c.active ? `<button class="tiny ghost" data-off="${c.id}">Disable</button>` : ''}</td>
+          <td>${c.active ? `<button class="tiny ghost" data-off="${c.id}">${esc(T.disable)}</button>` : ''}</td>
         </tr>`).join('')}
     </table></div>
-    <p class="small muted">Codes are never stored in readable form — only a bcrypt hash. A generated code is shown once; copy it before you leave the page.</p>
+    <p class="small muted">${esc(T.codesFoot)}</p>
 
-    <h2>Email notifications</h2>
+    <h2>${esc(T.emailSection)}</h2>
     <div class="card">
-      <p class="small muted" style="margin-top:0">
-        Barbers get an email the moment someone books, and customers get a confirmation.
-        Create a free sender account (Brevo gives 300 emails a day for free), verify the address
-        you want to send from, paste the API key here once, and you are done.
-      </p>
+      <p class="small muted" style="margin-top:0">${esc(T.emailIntro)}</p>
       <div class="grid2">
-        <div><label>Shop name (shown in the email)</label><input id="cShop" value="${esc(cfg.shop_name || '')}"></div>
-        <div><label>Provider</label>
+        <div><label>${esc(T.shopName)}</label><input id="cShop" value="${esc(cfg.shop_name || '')}"></div>
+        <div><label>${esc(T.provider)}</label>
           <select id="cProv">
-            <option value=""${!cfg.mail_provider ? ' selected' : ''}>Off — in-app only</option>
-            <option value="brevo"${cfg.mail_provider === 'brevo' ? ' selected' : ''}>Brevo (free, 300/day)</option>
-            <option value="resend"${cfg.mail_provider === 'resend' ? ' selected' : ''}>Resend (free, needs own domain)</option>
+            <option value=""${!cfg.mail_provider ? ' selected' : ''}>${esc(T.providerOff)}</option>
+            <option value="brevo"${cfg.mail_provider === 'brevo' ? ' selected' : ''}>${esc(T.providerBrevo)}</option>
+            <option value="resend"${cfg.mail_provider === 'resend' ? ' selected' : ''}>${esc(T.providerResend)}</option>
           </select>
         </div>
       </div>
       <div class="grid2">
-        <div><label>Send from (verified address)</label><input id="cFrom" type="email" value="${esc(cfg.mail_from_email || '')}"></div>
-        <div><label>Sender name</label><input id="cFromName" value="${esc(cfg.mail_from_name || '')}"></div>
+        <div><label>${esc(T.sendFrom)}</label><input id="cFrom" type="email" value="${esc(cfg.mail_from_email || '')}"></div>
+        <div><label>${esc(T.senderName)}</label><input id="cFromName" value="${esc(cfg.mail_from_name || '')}"></div>
       </div>
-      <label>API key ${cfg.mail_key_set ? '<span class="pill">stored</span>' : '<span class="pill off">not set</span>'}</label>
-      <input id="cKey" type="password" autocomplete="new-password" placeholder="${cfg.mail_key_set ? 'leave blank to keep the stored key' : 'paste the provider API key'}">
+      <label>${esc(T.apiKey)} ${cfg.mail_key_set ? `<span class="pill">${esc(T.stored)}</span>` : `<span class="pill off">${esc(T.notSet)}</span>`}</label>
+      <input id="cKey" type="password" autocomplete="new-password" placeholder="${esc(cfg.mail_key_set ? T.keepKey : T.pasteKey)}">
       <div style="height:16px"></div>
       <div class="row">
-        <button id="saveCfg">Save email settings</button>
-        <button class="ghost" id="testMail">Send a test email to me</button>
+        <button id="saveCfg">${esc(T.saveEmail)}</button>
+        <button class="ghost" id="testMail">${esc(T.sendTest)}</button>
       </div>
     </div>
 
-    <h2>Last emails sent</h2>
+    <h2>${esc(T.lastEmails)}</h2>
     <div class="scroll"><table>
-      <tr><th>When</th><th>To</th><th>Subject</th><th>Result</th></tr>
-      ${(mail.data || []).length === 0 ? `<tr><td colspan="4" class="muted">Nothing sent yet.</td></tr>` : (mail.data || []).map(m => `
+      <tr><th>${esc(T.when)}</th><th>${esc(T.toCol)}</th><th>${esc(T.subject)}</th><th>${esc(T.result)}</th></tr>
+      ${(mail.data || []).length === 0 ? `<tr><td colspan="4" class="muted">${esc(T.nothingSent)}</td></tr>` : (mail.data || []).map(m => `
         <tr><td class="small">${fmtDate(m.created_at)} ${fmtTime(m.created_at)}</td>
         <td class="small">${esc(m.to_email)}</td><td class="small">${esc(m.subject)}</td>
         <td class="small">${m.error ? `<span class="pill off">${esc(m.error)}</span>`
-          : m.status_code == null ? '<span class="pill off">queued…</span>'
-          : '<span class="pill">delivered</span>'}</td></tr>`).join('')}
+          : m.status_code == null ? `<span class="pill off">${esc(T.queued)}</span>`
+          : `<span class="pill">${esc(T.delivered)}</span>`}</td></tr>`).join('')}
     </table></div>
 
-    <h2>Security log</h2>
+    <h2>${esc(T.securityLog)}</h2>
     <div class="scroll"><table>
-      <tr><th>When</th><th>Event</th><th>Detail</th></tr>
-      ${(sec.data || []).length === 0 ? `<tr><td colspan="3" class="muted">Nothing yet.</td></tr>` : (sec.data || []).map(s => `
+      <tr><th>${esc(T.when)}</th><th>${esc(T.event)}</th><th>${esc(T.detail)}</th></tr>
+      ${(sec.data || []).length === 0 ? `<tr><td colspan="3" class="muted">${esc(T.nothingYet)}</td></tr>` : (sec.data || []).map(s => `
         <tr><td class="small">${fmtDate(s.at)} ${fmtTime(s.at)}</td>
         <td class="small">${esc(s.event)}</td>
         <td class="small muted">${esc(JSON.stringify(s.detail))}</td></tr>`).join('')}
@@ -453,22 +497,22 @@ async function managerPortal() {
       p_api_key: $('#cKey').value
     });
     if (error) return note(error.message, true);
-    await managerPortal(); note('Email settings saved.');
+    await managerPortal(); note(T.emailSaved);
   };
   $('#testMail').onclick = async () => {
     const { error } = await sb.rpc('send_test_email');
     if (error) return note(error.message, true);
-    setTimeout(async () => { await managerPortal(); note('Test queued — check "Last emails sent" and your inbox.'); }, 1500);
+    setTimeout(async () => { await managerPortal(); note(T.testQueued); }, 1500);
   };
   $('#mint').onclick = async () => {
     const { data, error } = await sb.rpc('create_barber_code', { p_label: $('#codeLabel').value.trim() });
     if (error) return note(error.message, true);
-    $('#codeOut').innerHTML = `<div class="note"><b>New barber code:</b> <span class="mono">${esc(data)}</span><br><span class="small">Shown once. Single use.</span></div>`;
+    $('#codeOut').innerHTML = `<div class="note"><b>${esc(T.newCode)}</b> <span class="mono">${esc(data)}</span><br><span class="small">${esc(T.shownOnce)}</span></div>`;
   };
   $$('[data-role]').forEach(s => s.onchange = async () => {
     const { error } = await sb.rpc('set_user_role', { p_user: s.dataset.role, p_role: s.value });
     if (error) { note(error.message, true); return; }
-    await managerPortal(); note('Role updated.');
+    await managerPortal(); note(T.roleUpdated);
   });
   $$('[data-vis]').forEach(b => b.onclick = async () => {
     await sb.from('profiles').update({ active: b.dataset.on !== '1' }).eq('id', b.dataset.vis);
@@ -482,68 +526,68 @@ async function managerPortal() {
   });
 }
 
-/* ================= CUSTOMER (Hebrew) ================= */
+/* ================= CUSTOMER ================= */
 let cust = { barber: null, day: todayISO(), slot: null };
 
 async function customerPortal() {
   const uid = state.session.user.id;
-  render(`<h1>קביעת תור</h1><p class="sub">טוען…</p>`, true);
+  render(`<h1>${esc(T.bookTitle)}</h1><p class="sub">${esc(T.loading)}</p>`);
   const [barbers, mine] = await Promise.all([
     sb.from('public_barbers').select('*').order('full_name'),
     sb.from('appointments').select('*').eq('customer_id', uid).gte('starts_at', new Date(Date.now() - 864e5).toISOString()).order('starts_at')
   ]);
   const list = barbers.data || [];
   const p = state.profile || {};
+  const open = (mine.data || []).filter(a => a.status === 'booked');
 
   render(`
-    <h1>קביעת תור</h1>
-    <p class="sub">בחרו ספר, בחרו שעה פנויה, וזה נסגר.</p>
+    <h1>${esc(T.bookTitle)}</h1>
+    <p class="sub">${esc(T.bookSub)}</p>
 
-    <h2>התורים שלי</h2>
+    <h2>${esc(T.myAppointments)}</h2>
     <div class="list">
-      ${(mine.data || []).filter(a => a.status === 'booked').length === 0 ? `<p class="muted">אין לכם תורים כרגע.</p>` :
-        (mine.data || []).filter(a => a.status === 'booked').map(a => {
-          const b = list.find(x => x.id === a.barber_id);
-          return `<div class="card tight between">
-            <div><h3>${fmtDate(a.starts_at, 'he-IL')} · ${fmtTime(a.starts_at)}</h3>
-            <div class="small muted">${esc(b?.full_name || 'ספר')}</div></div>
-            <button class="tiny ghost" data-cancel="${a.id}">ביטול</button>
-          </div>`;
-        }).join('')}
+      ${open.length === 0 ? `<p class="muted">${esc(T.noAppointments)}</p>` : open.map(a => {
+        const b = list.find(x => x.id === a.barber_id);
+        return `<div class="card tight between">
+          <div><h3>${fmtDate(a.starts_at)} · ${fmtTime(a.starts_at)}</h3>
+          <div class="small muted">${esc(b?.full_name || T.aBarber)}</div></div>
+          <button class="tiny ghost" data-cancel="${a.id}">${esc(T.cancel)}</button>
+        </div>`;
+      }).join('')}
     </div>
 
-    <h2>הספרים שלנו</h2>
+    <h2>${esc(T.ourBarbers)}</h2>
     <div class="list" id="barbers">
-      ${list.length === 0 ? `<p class="muted">אין ספרים זמינים כרגע.</p>` : list.map(b => `
+      ${list.length === 0 ? `<p class="muted">${esc(T.noBarbers)}</p>` : list.map(b => `
         <button class="barber ${cust.barber === b.id ? 'sel' : ''}" data-b="${b.id}">
           ${avatar(b.full_name, b.photo_path)}
           <div>
-            <h3>${esc(b.full_name || 'ספר')}</h3>
+            <h3>${esc(b.full_name || T.aBarber)}</h3>
             <div class="small muted">${esc(b.bio || '')}</div>
-            <div class="small muted">${b.slot_minutes} דקות לתור</div>
+            <div class="small muted">${b.slot_minutes} ${esc(T.minutesPer)}</div>
           </div>
         </button>`).join('')}
     </div>
 
     <div id="pick" class="${cust.barber ? '' : 'hidden'}">
-      <h2>בחירת תאריך ושעה</h2>
+      <h2>${esc(T.pickWhen)}</h2>
       <div class="card">
-        <label>תאריך</label>
+        <label>${esc(T.date)}</label>
         <input id="day" type="date" min="${todayISO()}" value="${cust.day}">
         <div style="height:14px"></div>
-        <div id="slots" class="muted">בחרו תאריך</div>
+        <div id="slots" class="muted">${esc(T.pickDatePrompt)}</div>
       </div>
       <div id="confirm" class="hidden">
         <div class="card">
-          <label>שם מלא</label><input id="cname" value="${esc(p.full_name || '')}">
-          <label>טלפון</label><input id="cphone" inputmode="tel" value="${esc(p.phone || '')}">
-          <label>הערות (לא חובה)</label><input id="cnotes" placeholder="תספורת + זקן">
+          <label>${esc(T.fullName)}</label><input id="cname" value="${esc(p.full_name || '')}">
+          <label>${esc(T.phone)}</label><input id="cphone" inputmode="tel" value="${esc(p.phone || '')}">
+          <label>${esc(T.notesOpt)}</label><input id="cnotes" placeholder="${esc(T.notesPlaceholder)}">
           <div style="height:16px"></div>
-          <button id="book">אישור התור</button>
+          <button id="book">${esc(T.confirmBooking)}</button>
         </div>
       </div>
     </div>
-  `, true);
+  `);
 
   $$('[data-b]').forEach(b => b.onclick = async () => {
     cust.barber = b.dataset.b; cust.slot = null;
@@ -561,11 +605,11 @@ async function customerPortal() {
 
   async function loadSlots() {
     const box = $('#slots');
-    box.className = 'muted'; box.textContent = 'טוען שעות…';
+    box.className = 'muted'; box.textContent = T.loadingSlots;
     const { data, error } = await sb.rpc('available_slots', { p_barber: cust.barber, p_day: cust.day });
-    if (error) { box.textContent = error.message; return; }
+    if (error) { box.textContent = humanError(error.message); return; }
     const slots = data || [];
-    if (!slots.length) { box.className = 'muted'; box.textContent = 'אין שעות פנויות בתאריך הזה.'; $('#confirm').classList.add('hidden'); return; }
+    if (!slots.length) { box.className = 'muted'; box.textContent = T.noSlots; $('#confirm').classList.add('hidden'); return; }
     box.className = 'slots';
     box.innerHTML = slots.map(s => `<button class="slot" data-s="${esc(s)}">${fmtTime(s)}</button>`).join('');
     $$('[data-s]', box).forEach(b => b.onclick = () => {
@@ -577,7 +621,7 @@ async function customerPortal() {
     const bookBtn = $('#book');
     if (bookBtn) bookBtn.onclick = async () => {
       const name = $('#cname').value.trim(), phone = $('#cphone').value.trim();
-      if (!name || !phone) return note('נדרשים שם וטלפון.', true);
+      if (!name || !phone) return note(T.needNamePhone, true);
       bookBtn.disabled = true;
       const { error } = await sb.rpc('book_appointment', {
         p_barber: cust.barber, p_start: cust.slot, p_name: name, p_phone: phone, p_notes: $('#cnotes').value.trim()
@@ -587,7 +631,7 @@ async function customerPortal() {
       await sb.from('profiles').update({ full_name: name, phone }).eq('id', uid);
       cust.slot = null;
       await customerPortal();
-      note('התור נקבע. הספר קיבל התראה.');
+      note(T.bookedOk);
     };
   }
 }

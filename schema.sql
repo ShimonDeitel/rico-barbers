@@ -441,3 +441,12 @@ create policy sec_select_mgr on public.security_events for select to authenticat
 -- book_appointment() additionally enforces: valid phone shape, at most 6 bookings
 -- per customer per hour, at most 3 upcoming appointments, no self-overlap, and
 -- nothing further out than 90 days. See the live functions for the exact bodies.
+
+-- ---------------------------------------------------------------------------
+-- Migration per_user_language: profiles.lang ('he' default, or 'en').
+-- book_appointment(), cancel_appointment() and send_test_email() compose each
+-- notification — and therefore each email — in the recipient's own language,
+-- so a Hebrew barber and an English customer get the same booking in their own.
+-- ---------------------------------------------------------------------------
+alter table public.profiles
+  add column if not exists lang text not null default 'he' check (lang in ('he','en'));
