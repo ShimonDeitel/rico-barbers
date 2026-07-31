@@ -1,0 +1,36 @@
+# Prospects
+
+Price: **300 ILS/month** for everyone new. Shlomo Brami (RICO) stays at 100, agreed 2026-07-31.
+
+Every row below was opened individually on Google Maps and read from its own place page.
+The Maps *result list* under-reports websites — it claimed "no website" for all seven of these,
+and four of them do have one. Never trust the list view.
+
+## Jerusalem barbershops, checked 2026-07-31
+
+| Shop | Rating | Reviews | Web presence | Verdict |
+|---|---|---|---|---|
+| **אבי אביב** | 4.9 | 233 | none at all | **best prospect.** Moshe Dayan 154, 02-654-3334 |
+| **Lior The Barber** | 4.7 | 116 | b144 directory listing only | **prospect.** Avinadav 23, 052-346-5906 |
+| **Zuhair's Barbershop** | 4.7 | 62 | israelbusinessguide listing only | **prospect.** E-Natr 6, 02-678-4121 |
+| אבישי דיין | 4.2 | 5 | avishay.tormahir.co.il | already pays a booking SaaS, but only 5 reviews |
+| Haim Simhon | 4.9 | 395 | haimbarber.com | real site. Different pitch, not a no-website one |
+| Meiri Barbershop | 5.0 | 116 | meiribarbershop.co.il | real site |
+| Jeries barbershop | 4.9 | 102 | jeriesbarbershop.com | real site |
+
+**Competitor spotted:** `tormahir.co.il` ("תור מהיר") is an Israeli booking SaaS. אבישי דיין is on it.
+Worth pricing against, the way Simpletor was at RICO.
+
+## Live demos built
+
+- **אבי אביב** — https://rico-barbers.pages.dev/avi-aviv/
+  Built from his Google listing only: name, real address, real phone, real opening hours.
+  No prices, no photos, no reviews, because I do not have them and will not invent them.
+  Gallery and reviews sections hide themselves when empty. **No staff or availability is set up,
+  so the booking screen says "no barbers available" and cannot take a real appointment nobody
+  would see.** Shop codes are in the database; do not publish them.
+
+## Watch out
+
+- **02-654-3334 is a landline.** WhatsApp will probably not reach it. This prospect may need a
+  phone call or a walk-in rather than a message.
