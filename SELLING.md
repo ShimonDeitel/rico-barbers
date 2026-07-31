@@ -2,18 +2,16 @@
 
 ## Price
 
-- List price **300 ILS/month**, paid by **Bit**.
-- Opening offer to the first Jerusalem shops: **150**.
-- Floor: **100**. Never open there, and never put the floor in writing.
-- Shlomo Brami (RICO) stays at 100, agreed 2026-07-31.
+- Opening offer to the first Jerusalem shops: **50 ILS/month**, paid by **Bit**.
+- Shlomo Brami (RICO) pays 100.
 
-Say the price on the first contact, every time. A barber who hears the number and keeps talking
-is a real lead. One who hears it only after you have done the work is an argument.
+**Give 50 a reason, or it reads as worthless.** A price that low with no explanation tells a
+barber the thing is worth nothing and he will treat it that way. "50 for the first shops in
+Jerusalem while I build my name" is true, keeps the value intact, and makes raising it later
+possible. A number with no story cannot be raised.
 
-**On "50% off":** do not write that nobody has ever paid 300. An invented old price is the kind
-of thing a barber checks with one phone call to another barber, and then you have lost him for
-good. "First shops in Jerusalem get it for 150" is true, does exactly the same job, and you can
-say it to his face. That is the framing used below.
+**Note the collision:** Shlomo is paying 100 for the same product. Jerusalem barbers talk. If
+he hears 50, expect that conversation.
 
 ---
 
@@ -129,30 +127,35 @@ is better spent on the next shop on the list.
 
 ## The text, short
 
-A barber reads this standing up, between two customers, with a phone in one hand.
-If it takes more than four seconds it does not get read. Short beats complete.
+A barber reads this standing up, between two customers. Four seconds or it does not get read.
 
-### First message
+### Version A, the one you asked for
+
+```
+תשמע, אני צעיר ומנסה להתחיל משהו משלי.
+בניתי לך אתר שלם, בלי שביקשת ובלי לקחת שקל:
+https://rico-barbers.pages.dev/lior-the-barber/
+50 בחודש. אני ממש צריך לקוח ראשון שייתן לי צ'אנס.
+```
+
+### Version B, the one I would send
 
 ```
 בניתי לך אתר למספרה, תראה:
 https://rico-barbers.pages.dev/lior-the-barber/
+50 בחודש למספרות הראשונות בירושלים, אני בונה שם לעצמי.
 ```
 
-Two lines. That is the whole thing. The link does the selling, not the text.
+Same warmth, same low price, same young-guy-starting-out story. The difference is that B gives
+him a reason to say yes and A gives him a reason to feel sorry for you. Sympathy does not open
+a wallet every month; a working booking page does. Desperation also invites him to push 50 down
+to nothing, and there is nowhere left to go.
 
 ### When he replies
 
 ```
 הלקוחות קובעים תור לבד, בלי טלפונים באמצע תספורת.
 הכתובת והשעות שלך כבר בפנים.
-```
-
-### When he asks the price
-
-```
-300 בחודש. למספרות הראשונות בירושלים 150.
-אני בונה ומתחזק, אתה רק חותך.
 ```
 
 ### If he goes quiet, once, after two days
@@ -165,11 +168,9 @@ Then stop.
 
 ### Rules
 
-- Two lines per message, never more.
-- One question or one idea per message. Let him reply between them.
-- The link goes in the first message. It is the only thing that matters.
+- Two to four lines per message, never more.
+- The link goes in the first message. It does the selling.
 - No greeting paragraph, no explaining what a website is, no emoji.
-- Say the price the moment he asks and not before.
 
 Swap the link per shop: `/avi-aviv/`, `/lior-the-barber/`, `/zuhairs-barbershop/`.
 
