@@ -125,54 +125,70 @@ is better spent on the next shop on the list.
 
 ---
 
-## The text, short
+## The approach, after Lior said no
 
-A barber reads this standing up, between two customers. Four seconds or it does not get read.
+**What happened.** One message carried the whole thing: who I am, a link to a finished site he
+never asked for, and a price. He replied "hope you have a good day". That is a polite close, and
+it is what a stranger sends when there is nothing left to be curious about.
 
-### Version A, the one you asked for
+**Two likely reasons, and both are fixable.** The desperate register made it easy to dismiss
+without cost. And handing over the finished product in message one left him nothing to ask for.
+A man who has already seen everything has no reason to reply.
 
-```
-תשמע, אני צעיר ומנסה להתחיל משהו משלי.
-בניתי לך אתר שלם, בלי שביקשת ובלי לקחת שקל:
-https://rico-barbers.pages.dev/lior-the-barber/
-50 בחודש. אני ממש צריך לקוח ראשון שייתן לי צ'אנס.
-```
+**The rule now: never send the link until he asks for it.** The link is what he gets for showing
+interest, not the thing that creates it.
 
-### Version B, the one I would send
-
-```
-בניתי לך אתר למספרה, תראה:
-https://rico-barbers.pages.dev/lior-the-barber/
-50 בחודש למספרות הראשונות בירושלים, אני בונה שם לעצמי.
-```
-
-Same warmth, same low price, same young-guy-starting-out story. The difference is that B gives
-him a reason to say yes and A gives him a reason to feel sorry for you. Sympathy does not open
-a wallet every month; a working booking page does. Desperation also invites him to push 50 down
-to nothing, and there is nowhere left to go.
-
-### When he replies
+### Message 1, a question about his day
 
 ```
-הלקוחות קובעים תור לבד, בלי טלפונים באמצע תספורת.
-הכתובת והשעות שלך כבר בפנים.
+היי, שמעון.
+שאלה אחת ואני עף: כמה פעמים ביום אתה עוצר באמצע תספורת בשביל לענות לטלפון?
 ```
 
-### If he goes quiet, once, after two days
+No link. No price. No product. It costs him one sentence to answer and it is about him, not me.
+A barber has a real feeling about this question, and the feeling is the sale.
+
+### Message 2, only after he answers
 
 ```
-ראית את זה?
+זה בדיוק מה שאני פותר. הלקוח קובע לבד, אתה לא עוצר באמצע.
 ```
 
-Then stop.
+Still no link. One line.
 
-### Rules
+### Message 3, only when he asks to see it
 
-- Two to four lines per message, never more.
-- The link goes in the first message. It does the selling.
-- No greeting paragraph, no explaining what a website is, no emoji.
+```
+https://rico-barbers.pages.dev/<slug>/
+```
 
-Swap the link per shop: `/avi-aviv/`, `/lior-the-barber/`, `/zuhairs-barbershop/`.
+The link alone. Nothing around it.
+
+### When he asks the price
+
+```
+50 בחודש. אני בונה ומתחזק.
+```
+
+Only when asked, never before.
+
+### If he goes quiet
+
+Nothing. Do not chase. A barber who wanted it answers within a day.
+
+### Register
+
+Professional, not chummy and not begging. Short lines. No "אחי", no pleading, no emoji,
+no explaining what a website is. You are a supplier making an offer, not someone asking a favour.
+
+### When someone says no
+
+```
+סבבה, תודה ובהצלחה.
+```
+
+That is all. It costs nothing, and a shop that says no in July sometimes calls in November.
+Arguing with a no guarantees it is permanent and gets you reported.
 
 ## Who can actually receive a text right now
 
