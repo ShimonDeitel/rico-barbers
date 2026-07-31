@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ, SHOP
-} from './ui.js?v=20260731131130';
+} from './ui.js?v=20260731132350';
 
 const home = $('#home');
 const view = $('#view');
@@ -898,16 +898,23 @@ async function managerView() {
   const weekEnd = new Date(Date.now() + 7 * 864e5).toISOString();
   const monthEnd = new Date(Date.now() + 70 * 864e5).toISOString();
   const [team, appts, cfg, sec, myAvail, myOff] = await Promise.all([
-    sb.rpc('list_team'),
+    sb.rpc('list_team', { p_shop: SHOP }),
     sb.from('appointments').select('*').eq('shop_id', shopId).eq('status', 'booked')
       .gte('starts_at', new Date(Date.now() - 40 * 864e5).toISOString())
       .lte('starts_at', monthEnd).order('starts_at'),
     sb.rpc('get_settings', { p_shop: SHOP }),
     sb.rpc('recent_security', { p_shop: SHOP, p_limit: 8 }),
-    sb.from('availability').select('*').eq('barber_id', me.id).order('weekday'),
+    sb.from('availability').select('*').eq('shop_id', shopId).eq('barber_id', me.id).order('weekday'),
     sb.from('time_off').select('*').eq('shop_id', shopId).eq('barber_id', me.id).gte('day', todayISO()).order('day')
   ]);
-  if (team.error) return toast(team.error.message, true);
+  // a toast alone would leave the screen on "loading" forever; say what broke
+  if (team.error) {
+    view.innerHTML = `<h1 class="page">${esc(T.manager)}</h1>
+      <p class="dek">${esc(team.error.message)}</p>
+      <button class="b ghost" id="retry">${esc(T.back)}</button>`;
+    $('#retry').onclick = staffView;
+    return toast(team.error.message, true);
+  }
 
   const rows = team.data || [];
   const byId = Object.fromEntries(rows.filter(r => r.user_id).map(r => [r.user_id, r]));
