@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ, SHOP
-} from './ui.js?v=20260731164748';
+} from './ui.js?v=20260731173155';
 
 const home = $('#home');
 const view = $('#view');
@@ -854,10 +854,33 @@ function wirePhotoPreview() {
     $('#photoPrev').innerHTML = `<img class="pic lg" src="${url}" alt="">`;
   };
 }
+/* A phone camera writes 3 to 5 MB per shot and none of it survives on screen at
+   1600px. Shrinking before upload is what keeps the free storage tier lasting:
+   roughly a tenth of the bytes for a photo nobody can tell apart. */
+async function shrink(file, max = 1600, quality = 0.82) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    if (scale === 1 && file.size < 400 * 1024) return file;      // already small
+    const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    c.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    bmp.close?.();
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', quality));
+    if (!blob || blob.size >= file.size) return file;            // no gain, keep the original
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+  } catch (e) {
+    return file;                                                 // never block an upload on this
+  }
+}
+
 async function uploadPhoto(current) {
-  const f = $('#photo')?.files[0];
-  if (!f) return { path: current || null, changed: false };
-  if (f.size > 3 * 1024 * 1024) { toast('3MB', true); return null; }
+  const raw = $('#photo')?.files[0];
+  if (!raw) return { path: current || null, changed: false };
+  if (raw.size > 12 * 1024 * 1024) { toast('12MB', true); return null; }
+  const f = await shrink(raw);
   const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
   // a fresh name every time: the bucket is CDN-cached, so overwriting one
   // path would keep serving the old picture
@@ -1251,14 +1274,18 @@ async function managerView() {
 
   $('#galFiles').onchange = async () => {
     readGal();
-    for (const f of [...$('#galFiles').files].slice(0, 12)) {
-      if (f.size > 3 * 1024 * 1024) { toast('3MB', true); continue; }
+    let saved = 0;
+    for (const raw of [...$('#galFiles').files].slice(0, 12)) {
+      if (raw.size > 12 * 1024 * 1024) { toast('12MB', true); continue; }
+      const f = await shrink(raw);
+      saved += raw.size - f.size;
       const path = `${me.id}/gallery/${Date.now()}-${Math.floor(performance.now())}.${(f.name.split('.').pop() || 'jpg').toLowerCase()}`;
       const up = await sb.storage.from('photos').upload(path, f, { upsert: true, contentType: f.type });
       if (up.error) { toast(up.error.message, true); continue; }
       gallery.push({ p: path, he: '', en: '' });
     }
-    $('#galFiles').value = ''; drawGal(); toast(T.saved);
+    $('#galFiles').value = ''; drawGal();
+    toast(saved > 200000 ? `${T.saved} · ${Math.round(saved / 1048576 * 10) / 10}MB` : T.saved);
   };
 
   $('#saveSite').onclick = async () => {
