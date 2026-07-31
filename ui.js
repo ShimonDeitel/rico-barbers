@@ -1,11 +1,20 @@
 /* Shared plumbing for every page: one Supabase client, one language switch,
    one set of strings, one set of helpers. */
 
-import { createClient } from './vendor/supabase.js?v=20260731020205';
+import { createClient } from './vendor/supabase.js?v=20260731131130';
 
 export const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';
 export const TZ = 'Asia/Jerusalem';
+
+/* Which business this page belongs to. One codebase, one database, many shops:
+   the slug comes from <meta name="shop">, so a new customer is a new folder and
+   nothing else. ?shop= is allowed too, for testing another shop's page. */
+export const SHOP = (() => {
+  const q = new URLSearchParams(location.search).get('shop');
+  const meta = document.querySelector('meta[name="shop"]')?.content;
+  return (q || meta || 'rico').toLowerCase().trim();
+})();
 const LANG_KEY = 'bs.lang';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -338,7 +347,8 @@ export async function shopContent() {
   if (contentCache) return contentCache;
   const out = {};
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/public_content?select=key,value`, {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/public_content?select=key,value&shop=eq.${encodeURIComponent(SHOP)}`, {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
     });
     if (res.ok) for (const r of await res.json()) out[r.key] = r.value;

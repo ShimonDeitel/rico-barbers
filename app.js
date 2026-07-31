@@ -7,8 +7,8 @@
 import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
-  avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ
-} from './ui.js?v=20260731020205';
+  avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ, SHOP
+} from './ui.js?v=20260731131130';
 
 const home = $('#home');
 const view = $('#view');
@@ -17,6 +17,14 @@ const SITE = location.origin + location.pathname;
 
 let C = {};                                   // shop content
 let me = { id: null, role: null, profile: null, email: null };
+let shopId = null;                            // this shop's uuid, resolved once from its slug
+
+async function loadShopId() {
+  if (shopId) return shopId;
+  const { data } = await sb.rpc('shop_id', { p_slug: SHOP });
+  shopId = data || null;
+  return shopId;
+}
 
 /* ============================ THE SHOP ============================ */
 
@@ -145,7 +153,7 @@ async function bookView() {
   view.innerHTML = `<h1 class="page">${esc(T.bookTitle)}</h1><p class="dek">${esc(T.loading)}</p>`;
 
   if (!barbers.length) {
-    const { data } = await sb.from('public_barbers').select('*').order('full_name');
+    const { data } = await sb.from('public_barbers').select('*').eq('shop', SHOP).order('full_name');
     barbers = data || [];
   }
   if (barbers.length === 1) pickd.barber = barbers[0].id;
@@ -263,7 +271,7 @@ async function loadSlots() {
   const box = $('#slots');
   box.className = 'dek'; box.textContent = T.loading;
   const { data, error } = await sb.rpc('available_slots',
-    { p_barber: pickd.barber, p_day: pickd.day, p_minutes: pickd.mins });
+    { p_shop: SHOP, p_barber: pickd.barber, p_day: pickd.day, p_minutes: pickd.mins });
   if (error) { box.textContent = error.message; return; }
   const slots = data || [];
   $('#details').classList.add('hide');
@@ -285,7 +293,7 @@ async function confirmBooking() {
   pickd.name = name; pickd.phone = phone;
   $('#go').disabled = true;
   const { data, error } = await sb.rpc('book_public', {
-    p_barber: pickd.barber, p_start: pickd.slot, p_name: name,
+    p_shop: SHOP, p_barber: pickd.barber, p_start: pickd.slot, p_name: name,
     p_phone: phone, p_notes: $('#cnotes').value.trim(), p_lang: lang,
     p_minutes: pickd.mins
   });
@@ -429,11 +437,12 @@ async function staffView() {
 
   me.id = session.user.id;
   me.email = session.user.email || '';
+  await loadShopId();
   const [r, p] = await Promise.all([
-    sb.from('user_roles').select('role').eq('user_id', me.id).maybeSingle(),
+    sb.rpc('my_role', { p_shop: SHOP }),
     sb.from('profiles').select('*').eq('id', me.id).maybeSingle()
   ]);
-  me.role = r.data?.role || 'customer';
+  me.role = r.data || 'customer';
   me.profile = p.data || {};
 
   keepLive();
@@ -452,7 +461,7 @@ const readTicket = () => { try { return JSON.parse(localStorage.getItem(TICKET_K
 const writeTicket = (t) => { try { t ? localStorage.setItem(TICKET_KEY, JSON.stringify(t)) : localStorage.removeItem(TICKET_KEY); } catch (e) { /* ignore */ } };
 
 async function doorScreen() {
-  const card = await sb.rpc('manager_card').then(r => (r.data && r.data[0]) || null);
+  const card = await sb.rpc('manager_card', { p_shop: SHOP }).then(r => (r.data && r.data[0]) || null);
   view.innerHTML = `
     <h1 class="page">${esc(T.staffTitle)}</h1>
     <p class="dek">${esc(T.doorSub)}</p>
@@ -500,7 +509,7 @@ function askCode(kind) {
     const code = $('#theCode').value.trim();
     if (code.length < 4) return toast(T.wrongCode, true);
     $('#checkIt').disabled = true;
-    const { data, error } = await sb.rpc('check_code', { p_kind: kind, p_code: code });
+    const { data, error } = await sb.rpc('check_code', { p_shop: SHOP, p_kind: kind, p_code: code });
     $('#checkIt').disabled = false;
     if (error) return toast(error.message, true);
     if (!data) {                                     // wrong, or locked out for guessing
@@ -590,12 +599,12 @@ function noAccessScreen() {
 
 async function barberView() {
   const [appts, avail, off, team] = await Promise.all([
-    sb.from('appointments').select('*').eq('barber_id', me.id).eq('status', 'booked')
+    sb.from('appointments').select('*').eq('shop_id', shopId).eq('barber_id', me.id).eq('status', 'booked')
       .gte('starts_at', new Date(Date.now() - 40 * 864e5).toISOString())
       .lte('starts_at', new Date(Date.now() + 70 * 864e5).toISOString()).order('starts_at'),
-    sb.from('availability').select('*').eq('barber_id', me.id).order('weekday'),
-    sb.from('time_off').select('*').eq('barber_id', me.id).gte('day', todayISO()).order('day'),
-    sb.rpc('list_team')
+    sb.from('availability').select('*').eq('shop_id', shopId).eq('barber_id', me.id).order('weekday'),
+    sb.from('time_off').select('*').eq('shop_id', shopId).eq('barber_id', me.id).gte('day', todayISO()).order('day'),
+    sb.rpc('list_team', { p_shop: SHOP })
   ]);
 
   const list = appts.data || [];
@@ -739,7 +748,7 @@ function wireTeam(after) {
     const self = b.dataset.rm === me.id;
     if (!confirm(self ? T.confirmRemoveSelf : T.confirmRemove)) return;
     b.disabled = true;
-    const { error } = await sb.rpc('remove_staff', { p_user: b.dataset.rm });
+    const { error } = await sb.rpc('remove_staff', { p_shop: SHOP, p_user: b.dataset.rm });
     if (error) { b.disabled = false; return toast(error.message, true); }
     if (self) { await sb.auth.signOut(); me = { id: null, role: null, profile: null, email: null }; return staffView(); }
     toast(T.saved); after();
@@ -853,11 +862,11 @@ function drawWorkHours(rows, barberId, after) {
       end_time: $('[data-f=c]', row).value
     })).filter(r => r.on && r.start_time && r.end_time && r.end_time > r.start_time);
 
-    const del = await sb.from('availability').delete().eq('barber_id', barberId);
+    const del = await sb.from('availability').delete().eq('shop_id', shopId).eq('barber_id', barberId);
     if (del.error) return toast(del.error.message, true);
     if (rows2.length) {
       const ins = await sb.from('availability').insert(rows2.map(w =>
-        ({ barber_id: barberId, weekday: w.weekday, start_time: w.start_time, end_time: w.end_time })));
+        ({ shop_id: shopId, barber_id: barberId, weekday: w.weekday, start_time: w.start_time, end_time: w.end_time })));
       if (ins.error) return toast(ins.error.message, true);
     }
     toast(T.saved); after();
@@ -878,7 +887,7 @@ function drawDaysOff(rows, after) {
   $('#addOff').onclick = async () => {
     if (!$('#offDay').value) return toast(T.date, true);
     const { error } = await sb.from('time_off').insert(
-      { barber_id: me.id, day: $('#offDay').value, note: $('#offNote').value.trim() });
+      { shop_id: shopId, barber_id: me.id, day: $('#offDay').value, note: $('#offNote').value.trim() });
     if (error) return toast(error.message, true);
     after();
   };
@@ -890,13 +899,13 @@ async function managerView() {
   const monthEnd = new Date(Date.now() + 70 * 864e5).toISOString();
   const [team, appts, cfg, sec, myAvail, myOff] = await Promise.all([
     sb.rpc('list_team'),
-    sb.from('appointments').select('*').eq('status', 'booked')
+    sb.from('appointments').select('*').eq('shop_id', shopId).eq('status', 'booked')
       .gte('starts_at', new Date(Date.now() - 40 * 864e5).toISOString())
       .lte('starts_at', monthEnd).order('starts_at'),
-    sb.rpc('get_settings'),
-    sb.rpc('recent_security', { p_limit: 8 }),
+    sb.rpc('get_settings', { p_shop: SHOP }),
+    sb.rpc('recent_security', { p_shop: SHOP, p_limit: 8 }),
     sb.from('availability').select('*').eq('barber_id', me.id).order('weekday'),
-    sb.from('time_off').select('*').eq('barber_id', me.id).gte('day', todayISO()).order('day')
+    sb.from('time_off').select('*').eq('shop_id', shopId).eq('barber_id', me.id).gte('day', todayISO()).order('day')
   ]);
   if (team.error) return toast(team.error.message, true);
 
@@ -1095,7 +1104,7 @@ async function managerView() {
     if (!current) return toast(T.needCurrentCode, true);
     $('#saveCodes').disabled = true;
     for (const [kind, code] of jobs) {
-      const { data, error } = await sb.rpc('set_code', { p_kind: kind, p_code: code, p_current: current });
+      const { data, error } = await sb.rpc('set_code', { p_shop: SHOP, p_kind: kind, p_code: code, p_current: current });
       if (error || data !== 'ok') {
         $('#saveCodes').disabled = false;
         return toast(error ? error.message : 'current manager code is wrong', true);
@@ -1213,7 +1222,7 @@ async function managerView() {
     ['tagline_he', 'tagline_en', 'about_he', 'about_en', 'address_he', 'address_en',
      'phone', 'whatsapp', 'instagram', 'maps_url', 'years', 'policy_he', 'policy_en']
       .forEach(k => { body[k] = $(`#k_${k}`).value.trim(); });
-    const { error } = await sb.rpc('set_content', { p_content: body });
+    const { error } = await sb.rpc('set_content', { p_shop: SHOP, p_content: body });
     if (error) return toast(error.message, true);
     C = { ...C, ...body };
     paintHome();
