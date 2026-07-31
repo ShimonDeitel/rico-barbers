@@ -17,6 +17,7 @@ for d in */; do
   [ -f "$d/index.html" ] || continue
   mkdir -p "dist/$d"
   cp "$d/index.html" "dist/$d/"
+  [ -f "$d/theme.css" ] && cp "$d/theme.css" "dist/$d/"
   echo "  + $d"
 done
 

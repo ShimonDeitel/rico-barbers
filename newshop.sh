@@ -35,6 +35,7 @@ sed -e "s|<meta name=\"shop\" content=\"rico\">|<meta name=\"shop\" content=\"$s
     -e "s|<title>.*</title>|<title>${name}</title>|" \
     -e "s|RICO BARBERS · ירושלים|${name}|" \
     -e 's|href="site.css|href="../site.css|' \
+    -e 's|</head>|<link rel="stylesheet" href="theme.css">\n</head>|' \
     -e 's|src="app.js|src="../app.js|' \
     -e 's|href="favicon|href="../favicon|g' \
     -e 's|href="apple-touch-icon|href="../apple-touch-icon|' \
@@ -53,6 +54,14 @@ sed -i '' -e '/property="og:image"/d' -e '/name="twitter:image"/d' \
   -e "s|<meta name=\"description\" content=\"[^\"]*\">|<meta name=\"description\" content=\"${tagline}\">|" \
   -e "s|<meta property=\"og:url\" content=\"[^\"]*\">|<meta property=\"og:url\" content=\"\">|" \
   "$dest/index.html"
+
+cat > "$dest/theme.css" <<'CSS'
+/* This shop's own look. The booking engine is shared; the design is not.
+   Override the tokens and nobody can tell two customers apart. */
+:root {
+  /* --ink: #0b0b0c; --paper: #f4f1ea; --dim: #8a8a8a; */
+}
+CSS
 
 echo "created $dest"
 echo "next:"
