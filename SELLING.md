@@ -127,58 +127,51 @@ is better spent on the next shop on the list.
 
 ---
 
-## The text, rewritten
+## The text, short
 
-Short lines. No paragraph longer than two. Nothing that sounds written by a company.
-Send it as **two messages**, not one wall: the first one earns the second.
+A barber reads this standing up, between two customers, with a phone in one hand.
+If it takes more than four seconds it does not get read. Short beats complete.
 
-### Message 1, the opener
-
-```
-היי, שמעון מדבר.
-ראיתי את המספרה שלכם בגוגל, 4.9 עם 233 ביקורות. יפה מאוד.
-שמתי לב שאין לכם אתר, אז בניתי לכם אחד. בלי לבקש כלום.
-```
-
-Wait. If he answers anything at all, even "מי זה", send the second.
-
-### Message 2, the link
+### First message
 
 ```
-https://rico-barbers.pages.dev/avi-aviv/
-
-הכתובת והשעות שלכם כבר בפנים, לקחתי מגוגל.
-מה שהוא עושה זה שהלקוח קובע תור לבד, גם בעשר בלילה, ואתם רואים הכל ביומן בטלפון.
-פחות טלפונים באמצע תספורת.
+בניתי לך אתר למספרה, תראה:
+https://rico-barbers.pages.dev/lior-the-barber/
 ```
 
-### If he asks the price
+Two lines. That is the whole thing. The link does the selling, not the text.
+
+### When he replies
 
 ```
-300 בחודש. למספרות הראשונות בירושלים אני עושה 150.
-בפנים גם מחירון, תמונות, ותזכורת ללקוח יום לפני שלא ישכח.
-אני בונה ואני מתחזק, אתה רק חותך.
+הלקוחות קובעים תור לבד, בלי טלפונים באמצע תספורת.
+הכתובת והשעות שלך כבר בפנים.
 ```
 
-### If he goes quiet for two days, once
+### When he asks the price
 
 ```
-היי, רק מוודא שראית. אם זה לא בשבילכם תגיד ואני לא מציק.
+300 בחודש. למספרות הראשונות בירושלים 150.
+אני בונה ומתחזק, אתה רק חותך.
 ```
 
-Then stop. Two unanswered messages is an answer.
+### If he goes quiet, once, after two days
 
-### Rules for sounding like a person
+```
+ראית את זה?
+```
 
-- Never open with "שלום רב" or "אני פונה אליך בנוגע". That is a robot and he will feel it.
-- One idea per line. Barbers read on a phone between customers.
-- No emoji.
-- Do not explain the technology. He does not care that it is a website.
-- Give him a way out in the first exchange. It is what makes the pitch feel like a person and
-  not a campaign, and the ones who stay are worth ten who were cornered.
+Then stop.
 
-Swap the link per shop: `/avi-aviv/`, `/lior-the-barber/`, `/zuhairs-barbershop/`,
-and swap the rating line for that shop's real numbers.
+### Rules
+
+- Two lines per message, never more.
+- One question or one idea per message. Let him reply between them.
+- The link goes in the first message. It is the only thing that matters.
+- No greeting paragraph, no explaining what a website is, no emoji.
+- Say the price the moment he asks and not before.
+
+Swap the link per shop: `/avi-aviv/`, `/lior-the-barber/`, `/zuhairs-barbershop/`.
 
 ## Who can actually receive a text right now
 
