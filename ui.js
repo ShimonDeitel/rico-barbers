@@ -1,7 +1,7 @@
 /* Shared plumbing for every page: one Supabase client, one language switch,
    one set of strings, one set of helpers. */
 
-import { createClient } from './vendor/supabase.js?v=20260731144412';
+import { createClient } from './vendor/supabase.js?v=20260731152648';
 
 export const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';
@@ -48,11 +48,14 @@ const S = {
     marquee: ['פייד', 'זקן', 'סטייל', 'ללא המתנה'],   /* fallback only, real shops override from their own content */
 
     /* booking */
-    bookTitle: 'קביעת תור', bookSub: 'בוחרים ספר, בוחרים שעה. בלי הרשמה, בלי סיסמה.',
+    bookTitle: 'קביעת תור', bookSub: 'בוחרים ספר, בוחרים שעה. מתחברים עם Google, בלי סיסמה.',
     step: 'שלב', chooseBarber: 'בחרו ספר', chooseDay: 'בחרו יום', chooseTime: 'בחרו שעה',
     yourDetails: 'הפרטים שלכם', fullName: 'שם מלא', phone: 'טלפון',
     notesOpt: 'הערות (לא חובה)', notesPh: 'תספורת + זקן',
     confirm: 'אישור התור', noBarbers: 'אין ספרים זמינים כרגע.',
+    signInToBook: 'מתחברים עם Google וקובעים תור.',
+    signInWhy: 'ההתחברות היא כדי שתוכלו לחזור ולבטל או לשנות, ולקבוע גם לילדים או לחבר מאותו חשבון.',
+    whoFor: 'התור בשביל מי?', whoForHint: 'אפשר לקבוע כמה תורים לאנשים שונים מאותו חשבון.',
     noSlots: 'אין שעות פנויות ביום הזה.', minutes: 'דקות',
     booked: 'התור נקבע', bookedSub: 'הספר קיבל התראה. נתראה!',
     myBookings: 'התורים שלי', noBookings: 'אין לכם תורים כרגע.',
@@ -133,7 +136,8 @@ const S = {
       'invalid phone number': 'מספר הטלפון לא תקין.',
       'too far in the future': 'התאריך רחוק מדי.',
       'too many bookings in the last hour, try again later': 'יותר מדי תורים בשעה האחרונה.',
-      'you already have 3 upcoming appointments': 'כבר יש 3 תורים קרובים למספר הזה.',
+      'you already have 10 upcoming appointments': 'כבר יש 10 תורים קרובים בחשבון הזה.',
+      'please sign in to book': 'צריך להתחבר כדי לקבוע תור.',
       'you already have an appointment at that time': 'כבר יש תור בשעה הזאת.',
       'slot not available': 'השעה הזאת נתפסה.',
       'unknown barber': 'הספר לא נמצא.',
@@ -170,11 +174,14 @@ const S = {
     min: 'min', currency: '₪',
     marquee: ['Fades', 'Beards', 'Style', 'No waiting'],   /* fallback only */
 
-    bookTitle: 'Book an appointment', bookSub: 'Pick a barber, pick a time. No signup, no password.',
+    bookTitle: 'Book', bookSub: 'Pick a barber, pick a time. Sign in with Google, no password.',
     step: 'Step', chooseBarber: 'Choose a barber', chooseDay: 'Choose a day', chooseTime: 'Choose a time',
     yourDetails: 'Your details', fullName: 'Full name', phone: 'Phone',
     notesOpt: 'Notes (optional)', notesPh: 'Haircut + beard',
     confirm: 'Confirm appointment', noBarbers: 'No barbers available yet.',
+    signInToBook: 'Sign in with Google and pick a time.',
+    signInWhy: 'Signing in is what lets you come back to cancel or change, and book for your kids or a friend from the same account.',
+    whoFor: 'Who is it for?', whoForHint: 'You can book several appointments for different people from one account.',
     noSlots: 'No free times that day.', minutes: 'minutes',
     booked: "You're booked", bookedSub: 'The barber has been notified. See you soon.',
     myBookings: 'My appointments', noBookings: 'You have no appointments right now.',

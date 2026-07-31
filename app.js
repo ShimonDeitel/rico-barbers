@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ, SHOP
-} from './ui.js?v=20260731144412';
+} from './ui.js?v=20260731152648';
 
 const home = $('#home');
 const view = $('#view');
@@ -154,8 +154,30 @@ const lengthsOf = (id) => {
   return o.length ? o : [b?.slot_minutes || 30];
 };
 
+/* Booking is tied to a Google account: it is what lets someone come back and
+   cancel, and what keeps several people's appointments together in one place. */
+async function customerGate() {
+  view.innerHTML = `
+    <h1 class="page">${esc(T.bookTitle)}</h1>
+    <p class="dek">${esc(T.signInToBook)}</p>
+    <div class="panel pad" style="max-width:420px;margin-top:18px">
+      <button class="b" id="cg">${esc(T.google)}</button>
+      <p class="dek" style="margin:14px 0 0;font-size:13px">${esc(T.signInWhy)}</p>
+    </div>`;
+  $('#cg').onclick = async () => {
+    $('#cg').disabled = true; $('#cg').textContent = T.signingIn;
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google', options: { redirectTo: SITE + '#/book' }
+    });
+    if (error) { $('#cg').disabled = false; $('#cg').textContent = T.google; toast(error.message, true); }
+  };
+}
+
 async function bookView() {
   view.innerHTML = `<h1 class="page">${esc(T.bookTitle)}</h1><p class="dek">${esc(T.loading)}</p>`;
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return customerGate();
 
   if (!barbers.length) {
     const { data } = await sb.from('public_barbers').select('*').eq('shop', SHOP).order('full_name');
@@ -163,13 +185,17 @@ async function bookView() {
   }
   if (barbers.length === 1) pickd.barber = barbers[0].id;
 
-  const refs = loadRefs();
-  const rows = await Promise.all(refs.map(id =>
+  // this account's appointments, plus any older ones booked before sign-in existed
+  const acct = await sb.rpc('my_bookings', { p_shop: SHOP });
+  const legacy = await Promise.all(loadRefs().map(id =>
     sb.rpc('get_booking', { p_id: id }).then(r => (r.data && r.data[0]) || null)));
-  const mine = rows.filter(Boolean)
+  const seen = new Set();
+  const mine = [...(acct.data || []), ...legacy.filter(Boolean)]
     .filter(a => a.status === 'booked' && new Date(a.ends_at) > new Date())
+    .filter(a => !seen.has(a.id) && seen.add(a.id))
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
-  saveRefs(mine.map(a => a.id));
+
+  if (!pickd.name) pickd.name = session.user.user_metadata?.full_name || '';
 
   const addr = pick('address');
 
@@ -183,8 +209,8 @@ async function bookView() {
         <div class="appt">
           <span class="time">${fmtTime(a.starts_at)}</span>
           <span class="grow">
-            <span class="who2">${esc(fmtDate(a.starts_at))}</span>
-            <span class="meta">${esc(a.barber_name || '')}</span>
+            <span class="who2">${esc(a.customer_name || fmtDate(a.starts_at))}</span>
+            <span class="meta">${esc(fmtDate(a.starts_at))} · ${esc(a.barber_name || '')}</span>
           </span>
         </div>
         <div class="brow" style="margin:-4px 0 12px">
@@ -214,13 +240,24 @@ async function bookView() {
       <div id="details" class="hide">
         <h2 class="sec">${esc(T.yourDetails)}</h2>
         <div class="panel pad">
-          <div class="field"><label>${esc(T.fullName)}</label><input id="cname" autocomplete="name" value="${esc(pickd.name)}"></div>
+          <div class="field">
+            <label>${esc(T.whoFor)}</label>
+            <input id="cname" autocomplete="name" value="${esc(pickd.name)}">
+            <p class="dek" style="font-size:13px;margin:8px 0 0">${esc(T.whoForHint)}</p>
+          </div>
           <div class="field"><label>${esc(T.phone)}</label><input id="cphone" inputmode="tel" autocomplete="tel" value="${esc(pickd.phone)}"></div>
           <div class="field"><label>${esc(T.notesOpt)}</label><input id="cnotes" placeholder="${esc(T.notesPh)}"></div>
           <button class="b" id="go">${esc(T.confirm)}</button>
         </div>
       </div>
+    </div>
+
+    <div class="center2" style="margin-top:30px">
+      <span class="dek" style="font-size:13px">${esc(T.signedInAs)} ${esc(session.user.email || '')}</span>
+      <button class="b ghost sm" id="cOut" style="margin-inline-start:10px">${esc(T.signOut)}</button>
     </div>`;
+
+  $('#cOut').onclick = async () => { await sb.auth.signOut(); pickd.slot = null; bookView(); };
 
   $$('[data-cancel]').forEach(b => b.onclick = async () => {
     b.disabled = true;
@@ -315,8 +352,8 @@ async function confirmBooking() {
     ${a ? `<div class="panel pad" style="margin-top:18px">
       <div class="appt" style="border:none;padding:0">
         <span class="time">${fmtTime(a.starts_at)}</span>
-        <span><span class="who2">${esc(fmtDate(a.starts_at))}</span>
-        <span class="meta">${esc(a.barber_name || '')}${addr ? ' · ' + esc(addr) : ''}</span></span>
+        <span><span class="who2">${esc(a.customer_name || fmtDate(a.starts_at))}</span>
+        <span class="meta">${esc(fmtDate(a.starts_at))} · ${esc(a.barber_name || '')}${addr ? ' · ' + esc(addr) : ''}</span></span>
       </div></div>
       <div class="brow" style="margin-top:14px">
         <a class="b" target="_blank" rel="noopener" href="${esc(googleCalUrl(a, a.barber_name, addr))}">${esc(T.addToCal)}</a>
@@ -324,7 +361,8 @@ async function confirmBooking() {
       </div>` : ''}
     <p class="dek" style="margin-top:26px">${esc(pick('policy'))}</p>`;
   const again = $('#again');
-  if (again) again.onclick = () => { pickd.slot = null; bookView(); };
+  // booking for the next person: keep the phone, clear the name and the slot
+  if (again) again.onclick = () => { pickd.slot = null; pickd.name = ''; bookView(); };
   scrollTo(0, 0);
 }
 
