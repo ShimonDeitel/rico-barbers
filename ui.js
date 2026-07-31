@@ -1,7 +1,7 @@
 /* Shared plumbing for every page: one Supabase client, one language switch,
    one set of strings, one set of helpers. */
 
-import { createClient } from './vendor/supabase.js?v=20260731152716';
+import { createClient } from './vendor/supabase.js?v=20260731162826';
 
 export const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';

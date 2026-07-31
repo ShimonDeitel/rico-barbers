@@ -42,10 +42,17 @@ sed -e "s|<meta name=\"shop\" content=\"rico\">|<meta name=\"shop\" content=\"$s
 
 [ -n "$tagline" ] && sed -i '' "s|<p class=\"lede\" id=\"tagline\">.*</p>|<p class=\"lede\" id=\"tagline\">${tagline}</p>|" "$dest/index.html"
 
-# the og: tags still point at Rico's photo and url; blank them rather than lie
+# The link preview is the first thing a prospect sees in WhatsApp. If it still says
+# RICO BARBERS the whole pitch reads as copy and paste, so rewrite every social tag.
 sed -i '' -e '/property="og:image"/d' -e '/name="twitter:image"/d' \
-          -e "s|<meta property=\"og:url\" content=\"[^\"]*\">|<meta property=\"og:url\" content=\"\">|" \
-          "$dest/index.html"
+  -e "s|<meta property=\"og:site_name\" content=\"[^\"]*\">|<meta property=\"og:site_name\" content=\"${name}\">|" \
+  -e "s|<meta property=\"og:title\" content=\"[^\"]*\">|<meta property=\"og:title\" content=\"${name}\">|" \
+  -e "s|<meta name=\"twitter:title\" content=\"[^\"]*\">|<meta name=\"twitter:title\" content=\"${name}\">|" \
+  -e "s|<meta property=\"og:description\" content=\"[^\"]*\">|<meta property=\"og:description\" content=\"${tagline}\">|" \
+  -e "s|<meta name=\"twitter:description\" content=\"[^\"]*\">|<meta name=\"twitter:description\" content=\"${tagline}\">|" \
+  -e "s|<meta name=\"description\" content=\"[^\"]*\">|<meta name=\"description\" content=\"${tagline}\">|" \
+  -e "s|<meta property=\"og:url\" content=\"[^\"]*\">|<meta property=\"og:url\" content=\"\">|" \
+  "$dest/index.html"
 
 echo "created $dest"
 echo "next:"
