@@ -8,7 +8,7 @@ import {
   sb, T, lang, toggleLang, applyDir, $, $$, esc, toast,
   fmtTime, fmtDate, fmtShort, todayISO, dayISO, shopNow,
   avatar, googleCalUrl, shopContent, parseJSON, SUPABASE_URL, TZ, SHOP
-} from './ui.js?v=20260731132350';
+} from './ui.js?v=20260731132731';
 
 const home = $('#home');
 const view = $('#view');
@@ -70,8 +70,13 @@ function paintHome() {
   $('#eyebrow').classList.toggle('shut', !open);
   $('#openState').textContent = open ? T.open : T.closed;
 
-  const w = T.marquee;
-  $('#marquee').innerHTML = [...w, ...w].map(x => `<span>${esc(x)}</span><i>&mdash;</i>`).join('');
+  // the ticker belongs to the shop, not to the codebase: its own city and services
+  const city = (pick('address').split(',').pop() || '').trim();
+  const svcNames = parseJSON(C.services_json, [])
+    .map(s => (lang === 'en' ? (s.en || s.he) : (s.he || s.en)) || '').filter(Boolean).slice(0, 4);
+  const w = [city, ...svcNames].filter(Boolean);
+  const words = w.length >= 3 ? w : T.marquee;
+  $('#marquee').innerHTML = [...words, ...words].map(x => `<span>${esc(x)}</span><i>&mdash;</i>`).join('');
 
   $('#services-list').innerHTML = parseJSON(C.services_json, []).map(s => `
     <div class="srow reveal">

@@ -1,7 +1,7 @@
 /* Shared plumbing for every page: one Supabase client, one language switch,
    one set of strings, one set of helpers. */
 
-import { createClient } from './vendor/supabase.js?v=20260731132350';
+import { createClient } from './vendor/supabase.js?v=20260731132731';
 
 export const SUPABASE_URL = 'https://vbhjrcakyhpexmntjgxd.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_Uxqwb3XTyEamTMOO9nE4Qw_RgI0vrxX';
@@ -45,7 +45,7 @@ const S = {
     pricesNote: 'המחירים מתעדכנים מעת לעת. התשלום במספרה.',
     open: 'פתוח עכשיו', closed: 'סגור עכשיו', closedToday: 'סגור',
     min: 'דק׳', currency: '₪',
-    marquee: ['ירושלים', 'יפו 216', 'פייד', 'זקן', 'סטייל', 'ללא המתנה'],
+    marquee: ['פייד', 'זקן', 'סטייל', 'ללא המתנה'],   /* fallback only, real shops override from their own content */
 
     /* booking */
     bookTitle: 'קביעת תור', bookSub: 'בוחרים ספר, בוחרים שעה. בלי הרשמה, בלי סיסמה.',
@@ -168,7 +168,7 @@ const S = {
     pricesNote: 'Prices change from time to time. Payment at the shop.',
     open: 'Open now', closed: 'Closed now', closedToday: 'Closed',
     min: 'min', currency: '₪',
-    marquee: ['Jerusalem', '216 Jaffa St', 'Fades', 'Beards', 'Style', 'No waiting'],
+    marquee: ['Fades', 'Beards', 'Style', 'No waiting'],   /* fallback only */
 
     bookTitle: 'Book an appointment', bookSub: 'Pick a barber, pick a time. No signup, no password.',
     step: 'Step', chooseBarber: 'Choose a barber', chooseDay: 'Choose a day', chooseTime: 'Choose a time',
