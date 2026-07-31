@@ -34,3 +34,36 @@ Worth pricing against, the way Simpletor was at RICO.
 
 - **02-654-3334 is a landline.** WhatsApp will probably not reach it. This prospect may need a
   phone call or a walk-in rather than a message.
+
+## Blocker: WhatsApp cannot send these
+
+2026-07-31: WhatsApp restricted the account's LINKED DEVICES for **7 days**, saying recent
+activity "may be a sign of spam, automated or bulk messaging". WhatsApp Web can no longer
+START NEW CHATS. The phone itself is unrestricted.
+
+So these three first-contact messages have to go out from the phone by hand. Automating cold
+first contact through WhatsApp Web is what caused this and will risk the number itself.
+
+## Messages ready to send
+
+**אבי אביב** — 02-654-3334 (landline, WhatsApp unlikely; may need a call or a walk-in)
+**Lior The Barber** — 052-346-5906 (mobile)
+**Zuhair's Barbershop** — 02-678-4121 (landline)
+
+Text, swapping the link per shop:
+
+```
+היי, מדבר שמעון
+
+בניתי לכם אתר למספרה, אפשר לראות אותו כאן:
+https://rico-barbers.pages.dev/<slug>/
+
+לקחתי את הפרטים מגוגל, הכתובת והשעות כבר בפנים. אין עדיין מחירון ותמונות כי אין לי אותם.
+
+מה שהוא עושה זה שהלקוחות קובעים תור לבד, בלי אפליקציה ובלי הרשמה, ואתם רואים את היומן מהטלפון.
+פחות טלפונים באמצע תספורת.
+
+אם זה מעניין אני משלים את המחירון והתמונות ומעביר לכם את הניהול. 300 שקל בחודש, הכל כלול ואני מתחזק.
+
+אם לא מעניין תגידו ואני לא מפריע יותר.
+```
