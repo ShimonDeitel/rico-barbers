@@ -53,7 +53,7 @@ Stop talking. Let him react.
 
 ### If he asks what it costs, or after he sounds interested
 
-> 300 שקל בחודש, הכל כלול. אני בונה, אני מתחזק, אם משהו נשבר אני מתקן.
+> 100 שקל בחודש, הכל כלול. אני בונה, אני מתחזק, אם משהו נשבר אני מתקן.
 > התשלום בביט, פעם בחודש.
 
 Do not soften it and do not offer a discount in the first call.
@@ -89,7 +89,7 @@ Then actually call on Sunday. Write the date down.
 
 ## Getting paid
 
-Say **300 a month, in Bit** on the first call and again when you hand over the manager code.
+Say **100 a month, in Bit** on the first call and again when you hand over the manager code.
 The moment he says yes, ask for the Bit payment before you fill in his prices and photos.
 
 ### Checking who is actually using it
@@ -108,7 +108,7 @@ Run `usage.sql` in the Supabase SQL editor. It labels every shop:
 Anything at `set up` or `LIVE` with no Bit received. Send this, once, friendly:
 
 > היי, ראיתי שהתחלתם לעבוד עם האתר, מעולה.
-> נשאר רק לסגור את התשלום, 300 בחודש. איך נוח לך, ביט?
+> נשאר רק לסגור את התשלום, 100 בחודש. איך נוח לך, ביט?
 
 If no answer after a few days, one more:
 
@@ -166,7 +166,7 @@ The link alone. Nothing around it.
 ### When he asks the price
 
 ```
-50 בחודש. אני בונה ומתחזק.
+100 בחודש. אני בונה ומתחזק.
 ```
 
 Only when asked, never before.
@@ -193,8 +193,8 @@ Arguing with a no guarantees it is permanent and gets you reported.
 
 | Shop | Number | Reachable? |
 |---|---|---|
-| **Lior The Barber** | 052-346-5906 | **Yes, mobile.** The only one |
-| אבי אביב | 02-654-3334 | No. Landline, no WhatsApp and no SMS |
+| **אבי אביב** | **050-7782431** | **Yes, WhatsApp**, published on his B144 listing |
+| Lior The Barber | 052-346-5906 | Mobile, but he already said no |
 | Zuhair's | 02-678-4121 | No. Landline |
 
 No Instagram business account found for any of the three in a first search, so Instagram DM is
