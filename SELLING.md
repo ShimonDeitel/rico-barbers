@@ -2,16 +2,15 @@
 
 ## Price
 
-- Opening offer to the first Jerusalem shops: **50 ILS/month**, paid by **Bit**.
-- Shlomo Brami (RICO) pays 100.
+- **100 ILS/month minimum.** That is the floor and the target. Do not go below it.
+- Paid by **Bit**. THE BIT NUMBER IS NOT RECORDED YET — Shimon has to supply it before anyone
+  can actually pay. Do not invent one and do not send a number you have not been given.
+- Shlomo Brami (RICO) is already at 100.
+- Goal: **10 paying shops**, which is 1,000 a month.
 
-**Give 50 a reason, or it reads as worthless.** A price that low with no explanation tells a
-barber the thing is worth nothing and he will treat it that way. "50 for the first shops in
-Jerusalem while I build my name" is true, keeps the value intact, and makes raising it later
-possible. A number with no story cannot be raised.
-
-**Note the collision:** Shlomo is paying 100 for the same product. Jerusalem barbers talk. If
-he hears 50, expect that conversation.
+At a normal cold conversion of 5 to 10 percent, ten closes needs on the order of a hundred
+qualified conversations. The 203-name list is the right size for that. The funnel is weeks of
+work, not one evening.
 
 ---
 

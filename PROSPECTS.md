@@ -32,8 +32,11 @@ Worth pricing against, the way Simpletor was at RICO.
 
 ## Watch out
 
-- **02-654-3334 is a landline.** WhatsApp will probably not reach it. This prospect may need a
-  phone call or a walk-in rather than a message.
+- **אבי אביב has a REAL WhatsApp mobile: 050-7782431**, published on his B144 listing with a
+  "ווטסאפ לעסק" badge. Google Maps showed only the shop landline 02-654-3334. Always check B144
+  as well as Maps before writing a prospect off as unreachable.
+- B144 masks most numbers behind an 076 proxy. Only some businesses publish a real mobile, and
+  those are the reachable ones. Clicking B144's WhatsApp button does not reveal the number.
 
 ## Blocker: WhatsApp cannot send these
 
