@@ -1,5 +1,7 @@
 # Send pack
 
+**Scheduled: Sunday 2 August, 08:00 Israel time.** First working morning of the week.
+
 Everything needed to run outreach. Nothing here goes out without Shimon's go-ahead.
 
 ## Before the first message
