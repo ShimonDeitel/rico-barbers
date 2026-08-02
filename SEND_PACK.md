@@ -41,12 +41,12 @@ Shimon is in Jerusalem, so these are the ones he can also walk into if WhatsApp 
 | יוסי לוי מעצב שיער | look up · גנרל קניג פייר 26 | B144 proxies his number |
 | מור אייל (אומן השיער הקצר) | look up | |
 | מספרת שמפו-בני אסרף | look up | |
-| TOMHAIR תומר הספר במושבה | look up | |
-| איתן סבג - עיצוב שיער | look up | |
+| **TOMHAIR תומר הספר במושבה** | **050-811-4188** | Ready. Mobile, so WhatsApp works. רחל אמנו 1, המושבה הגרמנית. Facebook page only, no real site. Second-best prospect after אבי אביב |
+| איתן סבג - עיצוב שיער | 02-641-0044 | Landline only. No WhatsApp. דהומיי 14, קרית מנחם. Phone call or walk in |
 | ליאור קרדי - סטודיו לעיצוב שיער | look up | |
 | אמיר מויאל מעצב שיער ופאות | look up | |
 | יוסי בן מעצב שיער | look up | |
-| Itzik Kalfon - מספרת בוטיק | look up · 129 ratings | |
+| Itzik Kalfon - מספרת בוטיק | number not published | Skip for now. He is in מטע, not Jerusalem, and already runs online booking on kavanu.co |
 
 Another 190 across the country in `PROSPECT_LIST.md`.
 
