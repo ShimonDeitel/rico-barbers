@@ -4,18 +4,23 @@
 
 Everything needed to run outreach. Nothing here goes out without Shimon's go-ahead.
 
-## Before the first message
+## WhatsApp is dead as a channel
 
-**The Bit number is missing.** Nobody can pay until Shimon supplies it. Do not invent one.
+On 2026-08-02 one opener sent from WhatsApp Web restricted the whole account for six hours.
+Not the linked device, the account: he could not text anyone, family included. **Do not send on
+WhatsApp again, from any device, at any volume.**
 
-**WhatsApp cannot start new chats** until roughly 7 August (restriction imposed 31 July).
-So for every prospect the first move is Shimon's, from his phone:
+Everything else was then tested and ruled out the same day:
 
-1. Save the number as a contact on the phone.
-2. Send one word from the phone: `היי`
-3. Tell Claude the chat is open, and Claude runs the rest from the desktop app.
+- **SMS from the Mac.** Messages shows a new Israeli mobile in red and refuses to send. Text
+  Message Forwarding is off on the iPhone.
+- **Email.** These shops do not publish one. Checked the directories and search for the shortlist.
+- **Instagram and Facebook.** No business account found for any shop on the shortlist.
 
-Without step 2 there is no conversation to have.
+What is left is the phone and the front door. The list, the walkable cluster and the timing are
+in `CALL_LIST.md`.
+
+**The Bit number is still missing.** Nobody can pay until Shimon supplies it.
 
 ## The sequence
 
